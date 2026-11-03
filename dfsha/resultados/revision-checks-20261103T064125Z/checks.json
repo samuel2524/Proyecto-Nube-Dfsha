@@ -1,0 +1,103 @@
+{
+  "environment": "local Docker; no AWS",
+  "records": [
+    {
+      "check": "syntax",
+      "files": 21,
+      "returncode": 0
+    },
+    {
+      "check": "contract and statistics",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--env-file",
+        ".env",
+        "-e",
+        "CERTS=/certs",
+        "-e",
+        "ETCD_ENDPOINTS=https://unused:2379",
+        "--mount",
+        "type=bind,source=C:\\Users\\USER\\Desktop\\Semestre 6\\Arquitectura de la nube\\Proyecto Nube\\DFSha_FaseII\\dfsha\\certs\\meta1,target=/certs,readonly",
+        "--mount",
+        "type=bind,source=C:\\Users\\USER\\Desktop\\Semestre 6\\Arquitectura de la nube\\Proyecto Nube\\DFSha_FaseII\\dfsha\\tests,target=/app/tests,readonly",
+        "dfsha:revision",
+        "python",
+        "-m",
+        "unittest",
+        "-v",
+        "tests.unit_contract",
+        "tests.test_statistics"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "test_commit_129_blocks_uses_bounded_transaction (tests.unit_contract.Contract.test_commit_129_blocks_uses_bounded_transaction) ... ok\ntest_gc_deletes_after_grace_not_during_token_lifetime (tests.unit_contract.Contract.test_gc_deletes_after_grace_not_during_token_lifetime) ... ok\ntest_gc_marks_without_deleting_first_cycle (tests.unit_contract.Contract.test_gc_marks_without_deleting_first_cycle) ... ok\ntest_gc_preserves_reader_and_prepared_session (tests.unit_contract.Contract.test_gc_preserves_reader_and_prepared_session) ... ok\ntest_repair_checks_authoritative_hash_and_receipt (tests.unit_contract.Contract.test_repair_checks_authoritative_hash_and_receipt) ... recibo de reparaci\u00c3\u00b3n inv\u00c3\u00a1lido\nok\ntest_summary_is_reconstructible_and_p95_is_max_for_five (tests.test_statistics.Statistics.test_summary_is_reconstructible_and_p95_is_max_for_five) ... ok\n\n----------------------------------------------------------------------\nRan 6 tests in 0.014s\n\nOK\n"
+    },
+    {
+      "check": "deployment package isolation",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--mount",
+        "type=bind,source=C:\\Users\\USER\\Desktop\\Semestre 6\\Arquitectura de la nube\\Proyecto Nube\\DFSha_FaseII\\dfsha,target=/workspace,readonly",
+        "--workdir",
+        "/workspace",
+        "dfsha:revision",
+        "python",
+        "-m",
+        "tests.test_deploy"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "test_roles_do_not_receive_foreign_secrets_and_have_container_hosts (__main__.Packages.test_roles_do_not_receive_foreign_secrets_and_have_container_hosts) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.982s\n\nOK\n"
+    },
+    {
+      "check": "four AWS Compose configurations",
+      "command": [
+        "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "scripts/check_deploy_config.py"
+      ],
+      "returncode": 0,
+      "stdout": "vm1 : Compose y extra_hosts v\u00e1lidos\nvm2 : Compose y extra_hosts v\u00e1lidos\nvm3 : Compose y extra_hosts v\u00e1lidos\nvm4 : Compose y extra_hosts v\u00e1lidos\n",
+      "stderr": ""
+    },
+    {
+      "check": "image identifier",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "dfsha:revision",
+        "--format",
+        "{{.Id}}"
+      ],
+      "returncode": 0,
+      "stdout": "sha256:ca59d29b4cf4b95dca76165dae38cee07c4ac3935665244c34d527146fcecb41\n",
+      "stderr": ""
+    },
+    {
+      "check": "mTLS rejects missing client certificate",
+      "command": [
+        "docker",
+        "compose",
+        "-p",
+        "dfsha-revision",
+        "-f",
+        "docker-compose.local.yml",
+        "exec",
+        "-T",
+        "cliente",
+        "python",
+        "-m",
+        "unittest",
+        "-v",
+        "tests.regression.Regression.test_mtls_rejects_missing_client_certificate"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "test_mtls_rejects_missing_client_certificate (tests.regression.Regression.test_mtls_rejects_missing_client_certificate) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.804s\n\nOK\n"
+    }
+  ]
+}

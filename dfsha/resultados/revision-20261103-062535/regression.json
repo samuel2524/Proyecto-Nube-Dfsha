@@ -1,0 +1,9 @@
+{
+  "environment": "local Docker (no AWS)",
+  "source_sha256": "9632b34fadbb8ad670ebc8f5b2f5281a02712b03be680a664b41bafcc05e9e8e",
+  "tests": 16,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "successful": true
+}
