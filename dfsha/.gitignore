@@ -1,0 +1,14 @@
+certs/
+.env
+__pycache__/
+*.pyc
+dfsha/dfsha_pb2*.py
+resultados/*.bin
+*.pem
+.venv/
+.audit.env
+deploy/hosts.generated.yml
+deploy/hosts.generated.json
+deploy/meta.env
+.compose-check-*/
+# JSON/CSV de revision-* sí se versionan como evidencia; los .bin no.

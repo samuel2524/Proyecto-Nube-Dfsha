@@ -1,0 +1,24 @@
+# Secretos y datos generados (también si se usa esta carpeta como raíz Git).
+**/certs/
+**/.env
+**/meta.env
+**/.venv/
+**/__pycache__/
+**/*.pyc
+*.pem
+**/hosts.generated.json
+**/dfsha_pb2*.py
+**/resultados/**/*.bin
+~$*
+*.zip
+# Material previo conservado localmente; no pertenece a la entrega corregida.
+informe/historico/
+informe/estilo.py
+informe/diagrama_despliegue.py
+informe/figuras/*
+!informe/figuras/componentes_revision.png
+!informe/figuras/despliegue_revision.png
+dfsha/resultados/bench.csv
+dfsha/resultados/P*.txt
+dfsha/resultados/AWS.txt
+dfsha/resultados/DESPLIEGUE.txt
