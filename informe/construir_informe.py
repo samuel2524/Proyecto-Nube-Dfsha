@@ -191,6 +191,9 @@ def build():
         ['close','Valida planes/locks, tamaños y CAS; publica versión y resultado idempotente en txn acotada.'],
         ['read','Lee snapshot; refresca ubicaciones/capacidades sin cambiar versión; valida hashes y GCM.'],
         ['GC','Retiene referencias actuales, lectores y planes; marca, espera y valida antes del borrado.']])
+    p('RF1 se cubre con login y el árbol por usuario; RF2 con put/get de archivo completo; RF3 con '
+      'open/close/read/write/lock y la semántica declarada: create-once por bloque, rw con lock, w/a '
+      'exclusivos y append sin pasar EOF.')
     p('API: /v1/auth/login; /v1/fs/ls,mkdir,rmdir,rm,rename; /v1/files/open; /v1/files/{fd}/keepalive,manifest,lock,unlock,blocks,close,abort,status. Las rutas /blocks/{bid}/authorize y /prepared separan autorización y confirmación. El contrato gRPC está en proto/dfsha.proto.')
     p('Ejemplo: POST /v1/files/{fd}/blocks con {"index":0,"request_id":"op-b0"}; authorize fija hash y tamaño; WriteBlock devuelve recibos firmados; prepared recibe {"receipts":["firma-dn1","firma-dn2"]}. Un recibo duplicado/falso recibe 409 BAD_RECEIPT. close con el mismo fd/cuerpo devuelve la versión publicada, sin publicar otra.')
     h('6. Consistencia, concurrencia y fallos')
