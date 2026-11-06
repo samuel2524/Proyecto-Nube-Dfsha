@@ -1,0 +1,36 @@
+{
+  "environment": "aws",
+  "source_sha256": "651c058b66f26fa9aecccc7268d285a3af3afef8cc621da424083131ce6eb3ea",
+  "python": "3.12.3",
+  "host": "vm4",
+  "parameters": {
+    "environment": "aws",
+    "repetitions": 5,
+    "sizes": [
+      10,
+      100,
+      500
+    ],
+    "clients": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "replication_size": 100,
+    "concurrent_size": 50
+  },
+  "started_utc": "2026-11-06T02:29:20.292251+00:00",
+  "status": "complete",
+  "dependencies": {
+    "fastapi": "0.115.12",
+    "grpcio": "1.71.0",
+    "cryptography": "44.0.2",
+    "PyJWT": "2.10.1",
+    "requests": "2.32.3",
+    "pydantic": "2.14.3"
+  },
+  "block_size": 8388608,
+  "max_blocks": 8192,
+  "finished_utc": "2026-11-06T02:35:36.823393+00:00"
+}

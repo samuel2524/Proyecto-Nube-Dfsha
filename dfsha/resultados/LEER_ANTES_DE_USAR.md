@@ -12,3 +12,10 @@ Los directorios `revision-*` son nuevas ejecuciones. Cada uno identifica si es l
 o AWS y conserva muestras o registros. Solo una repetición real en AWS puede producir
 la evidencia distribuida final de la Fase II; no convertir una prueba local en una
 captura que diga AWS.
+
+## Corridas en AWS Academy (4 VMs EC2 t3.small)
+
+- `revision-20261106-022151/` y `revision-20261106-023859/`: regresión completa en el bastión (18 y 19 casos, RUN_LARGE=1).
+- `revision-failures-aws-abe1be38f48a/`: caídas reales de dn1, meta1 y etcd1/etcd2 con `scripts/verify_aws.py`.
+- `revision-bench-20261106T022424Z-4026b2/`: benchmark interrumpido por `409 RETRY` (el cliente no reintentaba); se conserva.
+- `revision-bench-20261106T022920Z-5b3b1b/`: benchmark completo con el cliente corregido.

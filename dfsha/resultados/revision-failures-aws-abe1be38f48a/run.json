@@ -1,0 +1,196 @@
+{
+  "environment": "AWS Academy (4 VMs EC2)",
+  "path": "/failure-dcc6020185",
+  "records": [
+    {
+      "vm": "vm4",
+      "step": "sonda seed",
+      "seconds": 4.24,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:22:26.764931+00:00",
+      "stdout": "OK: seed",
+      "stderr": ""
+    },
+    {
+      "vm": "vm1",
+      "step": "detener dn",
+      "seconds": 13.03,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:22:39.792422+00:00",
+      "stdout": "dfsha-dn",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda check",
+      "seconds": 2.45,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:22:54.244897+00:00",
+      "stdout": "OK: check",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda write",
+      "seconds": 2.84,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:22:57.086459+00:00",
+      "stdout": "OK: write",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda repaired",
+      "seconds": 2.18,
+      "returncode": 1,
+      "polling": true,
+      "utc": "2026-11-06T02:22:59.271816+00:00",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/ubuntu/dfsha/tests/fault_probe.py\", line 46, in <module>\n    main()\n  File \"/home/ubuntu/dfsha/tests/fault_probe.py\", line 37, in main\n    assert all(len(set(b['todas'])) >= 3 and 'dn1' not in b['todas'] for b in stat['blocks'])\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError"
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda repaired",
+      "seconds": 2.27,
+      "returncode": 1,
+      "polling": true,
+      "utc": "2026-11-06T02:23:06.543454+00:00",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/ubuntu/dfsha/tests/fault_probe.py\", line 46, in <module>\n    main()\n  File \"/home/ubuntu/dfsha/tests/fault_probe.py\", line 37, in main\n    assert all(len(set(b['todas'])) >= 3 and 'dn1' not in b['todas'] for b in stat['blocks'])\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError"
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda repaired",
+      "seconds": 2.38,
+      "returncode": 1,
+      "polling": true,
+      "utc": "2026-11-06T02:23:13.927517+00:00",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/ubuntu/dfsha/tests/fault_probe.py\", line 46, in <module>\n    main()\n  File \"/home/ubuntu/dfsha/tests/fault_probe.py\", line 37, in main\n    assert all(len(set(b['todas'])) >= 3 and 'dn1' not in b['todas'] for b in stat['blocks'])\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError"
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda repaired",
+      "seconds": 2.26,
+      "returncode": 0,
+      "polling": true,
+      "utc": "2026-11-06T02:23:21.187209+00:00",
+      "stdout": "OK: repaired",
+      "stderr": ""
+    },
+    {
+      "vm": "vm1",
+      "step": "iniciar dn",
+      "seconds": 2.05,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:23.234450+00:00",
+      "stdout": "dfsha-dn",
+      "stderr": ""
+    },
+    {
+      "vm": "vm1",
+      "step": "detener meta",
+      "seconds": 5.01,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:28.245540+00:00",
+      "stdout": "dfsha-meta",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda check",
+      "seconds": 2.48,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:30.727960+00:00",
+      "stdout": "OK: check",
+      "stderr": ""
+    },
+    {
+      "vm": "vm1",
+      "step": "iniciar meta",
+      "seconds": 2.13,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:32.861046+00:00",
+      "stdout": "dfsha-meta",
+      "stderr": ""
+    },
+    {
+      "vm": "vm1",
+      "step": "detener etcd",
+      "seconds": 2.87,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:35.727059+00:00",
+      "stdout": "dfsha-etcd",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda check",
+      "seconds": 2.59,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:42.325013+00:00",
+      "stdout": "OK: check",
+      "stderr": ""
+    },
+    {
+      "vm": "vm2",
+      "step": "detener etcd",
+      "seconds": 2.82,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:45.149918+00:00",
+      "stdout": "dfsha-etcd",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda unavailable",
+      "seconds": 11.88,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:57.027190+00:00",
+      "stdout": "OK: pérdida de cuórum rechazada con 503",
+      "stderr": ""
+    },
+    {
+      "vm": "vm2",
+      "step": "iniciar etcd",
+      "seconds": 1.77,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:23:58.799079+00:00",
+      "stdout": "dfsha-etcd",
+      "stderr": ""
+    },
+    {
+      "vm": "vm1",
+      "step": "iniciar etcd",
+      "seconds": 1.81,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:24:00.610446+00:00",
+      "stdout": "dfsha-etcd",
+      "stderr": ""
+    },
+    {
+      "vm": "vm4",
+      "step": "sonda check",
+      "seconds": 2.39,
+      "returncode": 0,
+      "polling": false,
+      "utc": "2026-11-06T02:24:13.002540+00:00",
+      "stdout": "OK: check",
+      "stderr": ""
+    }
+  ]
+}

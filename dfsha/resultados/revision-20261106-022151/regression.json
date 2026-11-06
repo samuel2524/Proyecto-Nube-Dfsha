@@ -1,0 +1,9 @@
+{
+  "environment": "AWS Academy: 4 VMs t3.small (us-east-1a)",
+  "source_sha256": "5dd7c4e61570e53dcf3d316b6aa6d9134a8bc98500c55029ef08f06249b3388c",
+  "tests": 18,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "successful": true
+}
