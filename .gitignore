@@ -18,6 +18,7 @@ informe/diagrama_despliegue.py
 informe/figuras/*
 !informe/figuras/componentes_revision.png
 !informe/figuras/despliegue_revision.png
+!informe/figuras/aws_*.png
 dfsha/resultados/bench.csv
 dfsha/resultados/P*.txt
 dfsha/resultados/AWS.txt

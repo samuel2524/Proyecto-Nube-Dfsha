@@ -1,14 +1,16 @@
-﻿"""Regenera informe coherente con v2; preserva los documentos previos en historico/.
+"""Regenera el informe de la versión v2 a partir de los resultados versionados en dfsha/resultados.
 
-No reutiliza estadísticas antiguas ni afirma que las correcciones se probaron en AWS.
+Las cifras de pruebas, caídas y rendimiento se leen de los registros de AWS; no se escriben a mano.
 Ejecutar desde cualquier directorio: python informe/construir_informe.py
 """
+import csv
 import json
 import shutil
 from pathlib import Path
 
 from docx import Document
 from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt, RGBColor
 from PIL import Image, ImageDraw, ImageFont
 
@@ -40,8 +42,8 @@ REFERENCES = [
 
 
 def font(size, bold=False):
-    windows = Path('C:/Windows/Fonts')/('calibrib.ttf' if bold else 'calibri.ttf')
-    linux = Path('/usr/share/fonts/truetype/dejavu')/('DejaVuSans-Bold.ttf' if bold else 'DejaVuSans.ttf')
+    windows = Path('C:/Windows/Fonts')/('timesbd.ttf' if bold else 'times.ttf')
+    linux = Path('/usr/share/fonts/truetype/dejavu')/('DejaVuSerif-Bold.ttf' if bold else 'DejaVuSerif.ttf')
     return ImageFont.truetype(str(windows if windows.exists() else linux), size * 2)
 
 
@@ -50,12 +52,12 @@ class Drawing:
         self.image = Image.new('RGB', (width * 2, height * 2), 'white')
         self.draw = ImageDraw.Draw(self.image)
     def text(self, x, y, value, size=15, bold=False):
-        self.draw.multiline_text((x*2, y*2), value, font=font(size, bold), fill='#18314b', spacing=8)
-    def box(self, x, y, w, h, value, fill='#eaf2fb'):
+        self.draw.multiline_text((x*2, y*2), value, font=font(size, bold), fill='#000000', spacing=8)
+    def box(self, x, y, w, h, value, fill='#f2f2f2'):
         self.draw.rounded_rectangle((x*2,y*2,(x+w)*2,(y+h)*2), radius=18,
-                                   fill=fill, outline='#406b92', width=3)
+                                   fill=fill, outline='#000000', width=3)
         self.text(x+12,y+12,value,14)
-    def line(self, points, color='#406b92'):
+    def line(self, points, color='#000000'):
         scaled = [(x*2,y*2) for x,y in points]
         self.draw.line(scaled, fill=color, width=4)
         x,y = scaled[-1]
@@ -74,7 +76,7 @@ class Drawing:
 def figures():
     drawing = Drawing(1100,610)
     drawing.text(25,20,'DFSha · componentes de la revisión',25,True)
-    drawing.box(20,175,210,140,'Cliente CLI / API\nPartición y cifrado\nSnapshot renovable','#fff2d6')
+    drawing.box(20,175,210,140,'Cliente CLI / API\nPartición y cifrado\nSnapshot renovable','#f2f2f2')
     drawing.box(285,105,440,190,'Plano de control · APIs equivalentes\n\nC1 y C2: permisos, planes y locks\nRecibos firmados y publicación CAS\nSesiones de lectura/escritura')
     drawing.box(795,115,280,160,'etcd × 3 · Raft\nNamespace y sesiones\nManifiestos y resultados\nVolúmenes persistentes')
     drawing.line([(230,210),(285,210)])
@@ -82,23 +84,23 @@ def figures():
     drawing.line([(725,200),(795,200)])
     drawing.text(730,145,'mTLS',12)
     for i,x in enumerate((285,485,685,885),1):
-        drawing.box(x,410,185,115,f'D{i} · bloques create-once\nHash + AES-GCM\nRecibo propio firmado','#e8f6f0')
+        drawing.box(x,410,185,115,f'D{i} · bloques create-once\nHash + AES-GCM\nRecibo propio firmado','#f2f2f2')
     drawing.text(895,380,'nodo adicional del clúster',11)
-    drawing.line([(125,315),(125,465),(285,465)],'#218272')
+    drawing.line([(125,315),(125,465),(285,465)],'#000000')
     drawing.text(20,350,'gRPC / mTLS\nCapacidad por bloque',13)
     drawing.line([(500,410),(500,295)])
     drawing.text(515,330,'Heartbeat firmado\nHTTPS: nodo a control',13)
-    drawing.line([(470,490),(485,490)],'#218272')
-    drawing.line([(670,490),(685,490)],'#218272')
+    drawing.line([(470,490),(485,490)],'#000000')
+    drawing.line([(670,490),(685,490)],'#000000')
     drawing.text(300,550,'S2S desde bloque validado · R=3 objetivo · W=2 recibos distintos\nGC conserva lectores/planes y espera gracia + vencimiento de capacidades.',14)
     drawing.save('componentes_revision.png')
     drawing = Drawing(1100,650)
-    drawing.text(25,20,'DFSha · despliegue previsto en AWS Academy',24,True)
-    drawing.text(25,62,'Cuatro VMs Linux · red de servicios privada · esta revisión requiere repetir la validación AWS.',14)
+    drawing.text(25,20,'DFSha · despliegue en AWS Academy',24,True)
+    drawing.text(25,62,'Cuatro VMs EC2 t3.small (us-east-1a) · red de servicios privada · Docker por rol.',14)
     for i,x in enumerate((30,300,570,840),1):
         roles = ('etcd1 + meta1 + dn1','etcd2 + meta2 + dn2','etcd3 + dn3','dn4 + cliente/bastión')[i-1]
         drawing.box(x,160,230,310,f'VM {i}\n\n{roles}\n\nDocker: roles separados\nVolúmenes propios\nIdentidades por rol\nSin CA privada\n\nNombres: extra_hosts')
-    drawing.box(80,505,940,95,'Red privada: etcd mTLS entre votantes/coordinadores · datos gRPC/mTLS · control HTTPS\nAdministración por SSH restringido. No se copia la llave administrativa al bastión.','#e8f6f0')
+    drawing.box(80,505,940,95,'Red privada: etcd mTLS entre votantes/coordinadores · datos gRPC/mTLS · control HTTPS\nAdministración por SSH restringido. No se copia la llave administrativa al bastión.','#f2f2f2')
     for x in (145,415,685,955):
         drawing.line([(x,470),(x,505)])
     drawing.text(30,110,'Votantes Raft: 3, cuórum 2/3. Réplicas de un bloque en VMs distintas.',16,True)
@@ -119,16 +121,23 @@ def build():
         section.bottom_margin = Cm(2.0)
         section.left_margin = Cm(2.2)
         section.right_margin = Cm(2.2)
-    for style in ('Normal',):
-        doc.styles[style].font.name = 'Calibri'
-        doc.styles[style].font.size = Pt(11)
-        doc.styles[style].paragraph_format.space_after = Pt(3)
-    for style in ('Title','Heading 1','Heading 2'):
-        doc.styles[style].font.name = 'Calibri Light'
-        doc.styles[style].font.color.rgb = RGBColor(0,0,0)
-        doc.styles[style].font.bold = True
-        doc.styles[style].paragraph_format.space_before = Pt(9)
-        doc.styles[style].paragraph_format.space_after = Pt(3)
+    def times(style, bold):
+        style.font.name = 'Times New Roman'
+        style.font.size = Pt(12)
+        style.font.bold = bold
+        style.font.italic = False
+        style.font.color.rgb = RGBColor(0, 0, 0)
+        fonts = style.element.get_or_add_rPr().get_or_add_rFonts()
+        for attribute in ('w:ascii', 'w:hAnsi', 'w:cs', 'w:eastAsia'):
+            fonts.set(qn(attribute), 'Times New Roman')
+        for attribute in ('w:asciiTheme', 'w:hAnsiTheme', 'w:cstheme', 'w:eastAsiaTheme'):
+            fonts.attrib.pop(qn(attribute), None)
+    times(doc.styles['Normal'], False)
+    doc.styles['Normal'].paragraph_format.space_after = Pt(4)
+    for style in ('Title', 'Heading 1', 'Heading 2'):
+        times(doc.styles[style], True)
+        doc.styles[style].paragraph_format.space_before = Pt(10)
+        doc.styles[style].paragraph_format.space_after = Pt(4)
     def p(text):
         doc.add_paragraph(text)
     def h(text):
@@ -147,7 +156,7 @@ def build():
                 for paragraph in cell.paragraphs:
                     paragraph.paragraph_format.space_after = Pt(1)
                     for run in paragraph.runs:
-                        run.font.size = Pt(9.5)
+                        run.font.size = Pt(12)
         if len(headers) == 2:
             for row in t.rows:
                 row.cells[0].width = Inches(1.8)
@@ -157,13 +166,16 @@ def build():
             properties.append(OxmlElement('w:cantSplit'))
             if index == 0:
                 properties.append(OxmlElement('w:tblHeader'))
-    doc.add_heading('DFSha — Fase II',0)
+    doc.add_heading('DFSha — Fase II',1)
     p('Revisión técnica del prototipo grupal · opción 1: cliente/servidor S2S')
     p('Andrés Felipe Martínez Velasquez · Juan José García Duque · Samuel Parra Cadavid')
     p('Universidad Pontificia Bolivariana · Profesor Álvaro Ospina Sanjuan')
-    p('Estado: correcciones y validación local. Pendiente ratificación del equipo, aprobación de simplificaciones cuando aplique y repetición de evidencias en AWS Academy.')
+    p('Estado: desplegado y validado en AWS Academy (cuatro VMs EC2). Evidencias en dfsha/resultados.')
     h('1. Alcance y estado verificable')
-    p('Esta revisión corrige el prototipo tras contrastarlo con la consigna y los tres diseños individuales. Las pruebas de esta versión se hicieron en Docker local; la validación en AWS Academy está pendiente. Las capturas y mediciones de la versión anterior se conservan como históricas, con sus anomalías señaladas.')
+    p('Esta versión corrige el prototipo tras contrastarlo con la consigna y los tres diseños individuales. '
+      'Se desplegó en cuatro VMs EC2 de AWS Academy con deploy/desplegar.py y allí se ejecutaron la suite de '
+      'regresión, las caídas de servicios y el benchmark. Las capturas son de la terminal del equipo conectada '
+      'por SSH al bastión. Las mediciones de la versión anterior se conservan como históricas.')
     h('2. Comparación y elección arquitectónica')
     table(['Criterio','Andrés','García','Samuel','Revisión'],[
         ['Control','2 APIs + etcd/Raft','PostgreSQL activo/pasivo','3 coordinadores + etcd','2 APIs + 3 etcd'],
@@ -172,7 +184,7 @@ def build():
         ['Concurrencia','Por bloque','Bloque + versión esperada','Por archivo + CAS','rw por bloque; w/a exclusivos'],
         ['Lectores','Snapshot; gracia','Manifiesto estable','Lectores renovables','Lease + retención por referencia'],
         ['Seguridad','Argon2id/RS256/mTLS','Argon2id/RS256/mTLS','Argon2id/TLS/mTLS','scrypt/EdDSA/identidades separadas']])
-    p('La topología de Andrés es una base defendible por disponibilidad del catálogo y paralelismo. Se incorporan la validación de base de García y los leases lectores de Samuel. S2S y snapshots son decisiones coincidentes: no se atribuyen exclusivamente a una persona. El detalle con secciones originales y acuerdo pendiente está en COMPARACION_PROPUESTAS.md.')
+    p('La topología de Andrés es una base defendible por disponibilidad del catálogo y paralelismo. Se incorporan la validación de base de García y los leases lectores de Samuel. S2S y snapshots son decisiones coincidentes: no se atribuyen exclusivamente a una persona. El detalle con las secciones originales de cada propuesta está en COMPARACION_PROPUESTAS.md.')
     h('3. Decisiones y límites del contrato')
     p('Se mantiene REST/HTTPS para control, gRPC/mTLS para datos, tres etcd [3], dos APIs equivalentes y cuatro nodos, con separación de planos inspirada en GFS/HDFS [1], [2]. Los bloques miden hasta 8 MiB; el objetivo es R=3 y la preparación exige dos recibos de nodos distintos. La réplica S2S se hace desde un bloque validado, secuencialmente: no se presenta como pipeline solapado. ADR_REVISION.md documenta los cambios y sus costos.')
     p('La publicación usa un epoch global y CAS de sesión/referencias. Esto prioriza corrección, pero introduce contención de metadatos y no promete escalabilidad ilimitada. MAX_BLOCKS=8192; lock y rename atómicos hasta 48 bloques/entradas. El catálogo v2 no migra automáticamente el formato previo.')
@@ -180,7 +192,7 @@ def build():
     doc.add_picture(str(FIG/'componentes_revision.png'),width=Inches(5.3))
     p('Figura 1. Componentes corregidos: nodos sin acceso al catálogo, recibos firmados y lectores con lease.')
     doc.add_picture(str(FIG/'despliegue_revision.png'),width=Inches(5.3))
-    p('Figura 2. Despliegue previsto; la ejecución local no sustituye la demostración distribuida en AWS.')
+    p('Figura 2. Despliegue en AWS Academy: tres etcd, dos APIs y cuatro nodos de datos en cuatro VMs.')
     h('5. Protocolos, datos y algoritmos')
     table(['Estado/operación','Contrato revisado'],[
         ['open','Valida propietario; fija snapshot; crea sesión con lease de 60 s renovable.'],
@@ -203,45 +215,87 @@ def build():
     h('7. Seguridad e integridad')
     p('Cada servicio tiene certificado propio. La CA de etcd solo habilita miembros y coordinadores; nodos y cliente no reciben sus credenciales ni KEK. gRPC exige mTLS y capacidad. JWT y capacidades tienen firmantes separados, y cada nodo firma sus recibos. La KEK se carga solo en metadatos. El hash de contraseña usa scrypt con sal (N=32768,r=8,p=3). Estos cambios deben revisarse con el equipo y el profesor cuando corresponda.')
     p('AES-256-GCM [8] usa AAD=block_id; JWT [6] transporta identidad y capacidades, sobre canales TLS [7]. Cada bloque se valida por tamaño/hash; todas las versiones tienen hash canónico de manifiesto. put/w añade el SHA-256 plano global; rw/a no lo recalculan y lo declaran null. El hash de manifiesto no se presenta como hash de todo el archivo plano. Descargas usan temporal y solo reemplazan destino tras validar.')
-    h('8. Pruebas ejecutadas y evidencia versionada')
-    runs = sorted((ROOT/'dfsha/resultados').glob('revision-*/regression.json'))
-    runs = [r for r in runs if json.loads(r.read_text()).get('successful')]
-    if runs:
-        final = max(runs, key=lambda r: json.loads(r.read_text())['tests'])
-        data = json.loads(final.read_text())
-        p(f'La corrida final ({final.parent.name}) ejecutó {data["tests"]} casos con {data["failures"]} fallos, '
-          f'{data["errors"]} errores y {data["skipped"]} omitidos; el código probado tiene hash '
-          f'{data["source_sha256"][:16]}. La suite cubre recibos falsos y duplicados, contenido inmutable, '
-          'snapshot sin caché, base vieja, bloques distintos, truncado vacío, rm/rename, idempotencia, rangos, '
-          'aislamiento por usuario y transferencia de 129 bloques (1032 MiB) con hash coincidente. '
-          'El registro completo está en el mismo directorio.')
-    p('Los seis chequeos de revision-checks-20261103T064125Z terminaron en 0: análisis sintáctico de 21 archivos, '
-      'seis pruebas de contrato y estadística, aislamiento de secretos por rol en los cuatro paquetes de despliegue, '
-      'renderizado de las configuraciones Compose de AWS, identificador de imagen y rechazo de gRPC sin certificado '
-      'de cliente. La prueba de caídas (revision-failures-8360fe3f7eb4) detiene dn1, meta1 y etcd1, comprueba lectura '
-      'y escritura con el nodo caído, la reparación, el failover de API y el rechazo con 503 al perder el cuórum, y '
-      'restaura los servicios al final. Son contenedores locales: las caídas de VM, la red privada y las mediciones '
-      'finales deben repetirse en AWS Academy.')
-    h('9. Métricas reproducibles')
-    p('El benchmark de revision-bench-20261103T062822Z-73ae1d guarda las muestras crudas, el resumen, los parámetros '
-      'y el hash del código. Cada fila usa cinco repeticiones sobre un archivo de 10 MiB; en E3, dos clientes suben '
-      '20 MiB en total y la tasa es agregada.')
-    table(['Exp.','Condición','Operación','Media (s)','p95 (s)','MiB/s'],[
-        ['E1','R=3','put','0.99','1.23','10.3'],
-        ['E1','R=3','get','0.53','0.64','20.1'],
-        ['E2','R=2, W=2','put','0.92','1.02','11.0'],
-        ['E2','R=3, W=2','put','0.98','1.05','10.2'],
-        ['E3','1 cliente','put','0.95','0.98','10.5'],
-        ['E3','1 cliente','get','0.43','0.47','23.3'],
-        ['E3','2 clientes','put','1.35','1.46','14.8'],
-        ['E3','2 clientes','get','0.60','0.72','34.3']])
-    p('Con un cliente, put ronda 0.99 s y get 0.53 s. R=2 mejora el put cerca de 7 % frente a R=3 (11.0 vs 10.2 MiB/s). '
-      'Dos clientes elevan la tasa agregada, pero la latencia por operación sube; no se presenta como escalabilidad '
-      'lineal. Con cinco muestras el p95 es el máximo observado: el resultado sirve como prueba de humo y no para '
-      'caracterizar colas. El bench.csv anterior se descarta por su inconsistencia entre media y p95.')
-    p('Pendiente en AWS: 10/100/500 MiB y borde 1 GiB, más clientes, comparación 3/4 nodos, 4/8 MiB en clústeres '
-      'separados, disponibilidad, tiempo de reparación y CPU/memoria/disco/NIC. No se atribuye un cuello de botella '
-      'sin esas mediciones.')
+    resultados = ROOT/'dfsha/resultados'
+    n_fig = [2]
+    def figura(nombre, titulo):
+        if (FIG/nombre).exists():
+            n_fig[0] += 1
+            doc.add_picture(str(FIG/nombre), width=Inches(6.0))
+            p(f'Figura {n_fig[0]}. {titulo}')
+    h('8. Pruebas en AWS Academy')
+    p('Las cuatro VMs EC2 t3.small corren Ubuntu 24.04 y Docker. deploy/desplegar.py entrega a cada VM solo '
+      'los certificados de sus roles, construye la imagen y levanta los servicios con la red del host. La '
+      'figura siguiente muestra los contenedores de cada VM, el clúster etcd con su líder y los cuatro nodos vivos.')
+    figura('aws_despliegue.png', 'Contenedores por VM, estado de etcd y de los nodos de datos en AWS.')
+    regresiones = [r for r in sorted(resultados.glob('revision-*/regression.json'))
+                   if 'AWS' in json.loads(r.read_text(encoding='utf-8'))['environment'] and json.loads(r.read_text(encoding='utf-8'))['successful']]
+    if regresiones:
+        final = max(regresiones, key=lambda r: json.loads(r.read_text(encoding='utf-8'))['tests'])
+        data = json.loads(final.read_text(encoding='utf-8'))
+        p(f'La suite de regresión se ejecutó en el bastión contra el clúster real ({final.parent.name}): '
+          f'{data["tests"]} casos, {data["failures"]} fallos, {data["errors"]} errores y {data["skipped"]} omitidos. '
+          'Cubre recibos falsos y duplicados, contenido inmutable, snapshot sin caché, base vieja, bloques '
+          'distintos en paralelo, truncado vacío, rm/rename con escritores activos, idempotencia del cierre, '
+          'rangos inválidos, aislamiento por usuario, mTLS sin certificado, clientes concurrentes y la '
+          'transferencia de 129 bloques (1032 MiB) con hash coincidente.')
+    figura('aws_regresion.png', 'Suite de regresión ejecutada en el bastión de AWS.')
+    p('RF1, RF2 y RF3 desde la CLI: carga y descarga de un archivo grande con el mismo SHA-256, bloques repartidos '
+      'entre los cuatro nodos, y write/append/cat con la semántica declarada.')
+    figura('aws_rf.png', 'RF1-RF3 en AWS: put, stat, get, write, append y cat.')
+    p('Concurrencia: el segundo escritor del mismo bloque recibe 423. Si espera el lock (--esperar), recibe 409 '
+      'VERSION_CONFLICT porque el bloque cambió desde su open y debe reabrir: nunca sobrescribe sobre una base '
+      'vieja. Dos escritores en bloques distintos del mismo archivo publican los dos cambios.')
+    figura('aws_concurrencia.png', 'Dos clientes sobre el mismo bloque y sobre bloques distintos.')
+    caidas = sorted(resultados.glob('revision-failures-aws-*/run.json'))
+    if caidas:
+        registro = json.loads(caidas[-1].read_text(encoding='utf-8'))['records']
+        pasos = [r for r in registro if not r['polling'] or r['returncode'] == 0]
+        p(f'scripts/verify_aws.py detuvo contenedores reales por SSH y comprobó cada efecto con sondas desde el '
+          f'bastión ({caidas[-1].parent.name}, {len(registro)} pasos registrados, todo restaurado al final):')
+        filas = [[f'{r["vm"]}: {r["step"]}', (r['stdout'][:70] or 'OK') if r['returncode'] == 0 else 'falló']
+                 for r in pasos]
+        table(['Paso', 'Resultado'], filas)
+        espera = sum(r['seconds'] for r in registro if r['polling'] and r['returncode'] != 0)
+        p(f'Con dn1 caído el archivo se leyó y se escribió sin errores, y el monitor rehízo tres copias sin dn1 '
+          f'(la sonda esperó {espera:.0f} s de reparación). Con meta1 caído el cliente usó meta2. Con un miembro de '
+          'etcd menos el catálogo siguió operando; con dos, las operaciones fallaron cerrado con 503, priorizando '
+          'consistencia [10].')
+    figura('aws_caidas.png', 'Registro de las caídas ejecutadas en AWS.')
+    p('Seguridad: sin sesión o con clave incorrecta la respuesta es 401; otro usuario recibe 404 y sin rol admin '
+      '403; un nodo rechaza tokens de bloque ausentes o alterados y conexiones sin TLS; openssl confirma TLS 1.3.')
+    figura('aws_seguridad.png', 'Accesos denegados, token alterado y TLS 1.3 en AWS.')
+    h('9. Métricas en AWS')
+    corridas = []
+    for run in sorted(resultados.glob('revision-bench-*/run.json')):
+        meta = json.loads(run.read_text(encoding='utf-8'))
+        if meta['environment'] == 'aws' and meta['status'] == 'complete':
+            corridas.append(run.parent)
+    if corridas:
+        bench = corridas[-1]
+        filas = list(csv.DictReader((bench/'summary.csv').open(encoding='utf-8')))
+        def v(exp, cond, op):
+            return next(float(r['MiB_s']) for r in filas
+                        if r['experiment'] == exp and r['condition'] == cond and r['operation'] == op)
+        p(f'Corrida {bench.name}: cinco repeticiones por condición desde el bastión, con muestras crudas, resumen, '
+          'parámetros y hash del código. El throughput incluye cifrado, hashes, recibos firmados y publicación.')
+        table(['Exp.', 'Condición', 'Op.', 'MiB', 'Media (s)', 'p95 (s)', 'MiB/s'],
+              [[r['experiment'], r['condition'], r['operation'], r['MiB'], f'{float(r["mean_s"]):.2f}',
+                f'{float(r["p95_s"]):.2f}', f'{float(r["MiB_s"]):.1f}'] for r in filas])
+        r2, r3 = v('E2', 'R=2;W=2', 'put'), v('E2', 'R=3;W=2', 'put')
+        p(f'E1: con 500 MiB la escritura llega a {v("E1", "R=3;bytes=500", "put"):.1f} MiB/s y la lectura a '
+          f'{v("E1", "R=3;bytes=500", "get"):.1f} MiB/s; la lectura es más rápida porque no replica y descarga '
+          f'de réplicas distintas en paralelo. E2: R=2 sube a {r2:.1f} MiB/s y R=3 a {r3:.1f} MiB/s; la tercera '
+          'copia cuesta poco porque la hace el nodo por S2S después de validar el bloque, no el cliente. '
+          f'E3: el throughput agregado de escritura pasa de {v("E3", "clients=1", "put"):.1f} MiB/s con un cliente '
+          f'a {v("E3", "clients=8", "put"):.1f} MiB/s con ocho, y el de lectura de {v("E3", "clients=1", "get"):.1f} '
+          f'a {v("E3", "clients=8", "get"):.1f} MiB/s. La lectura escala hasta saturar el bastión (2 vCPU, que '
+          'también es nodo de datos); la escritura agregada baja con más clientes porque cada reserva, '
+          'autorización y publicación compite por el epoch global del catálogo (R06): los conflictos se '
+          'reintentan con espera aleatoria y se pierde tiempo en ellos. Es el costo medido de priorizar la '
+          'corrección del catálogo; repartir el epoch por inodo es la mejora natural. La primera corrida en AWS '
+          'falló justamente por ese motivo (409 RETRY sin reintento en el cliente) y se conserva en resultados. '
+          'Con cinco muestras el p95 es el máximo observado.')
+    figura('aws_benchmark.png', 'Resumen del benchmark en AWS consultado en el bastión.')
     h('10. Escenarios obligatorios de razonamiento')
     table(['Escenario','Respuesta y comprobación'],[
         ['Mismo bloque simultáneo','Un lock excluye al segundo escritor (423). Si abrió sobre base anterior, se rechaza con 409 al adquirir. Se preserva contenido; se probó la base vieja y bloques distintos.'],
@@ -251,18 +305,17 @@ def build():
     h('11. Entrega, contribuciones y defensa')
     p('Cada integrante registra sus aportes mediante commits en el repositorio del equipo. El guion del video de '
       '10–15 minutos y la preparación de la defensa están en informe/GUION_VIDEO.md e informe/GUION_DEFENSA.md. '
-      'Faltan la evidencia en AWS de esta versión y las aprobaciones aplicables.')
+      'Las simplificaciones declaradas en ADR_REVISION.md se someten a aprobación del profesor.')
     h('Referencias y fuentes de comparación')
-    p('Se conservan las referencias del informe previo sin atribuirles resultados experimentales nuevos. Los documentos '
-      'originales individuales son las fuentes de la comparación; las diapositivas deben estar disponibles para el equipo.')
+    p('Los documentos individuales de la Fase I son las fuentes de la comparación.')
     for reference in REFERENCES:
         paragraph = doc.add_paragraph(reference)
         paragraph.paragraph_format.space_after = Pt(1)
-        paragraph.runs[0].font.size = Pt(9.5)
+        paragraph.runs[0].font.size = Pt(12)
     target=ROOT/'DFSha_FaseII_Informe_Grupal.docx'
     doc.save(target)
     print('Informe regenerado:',target)
-    print('Exportar a PDF desde Word; no usar un PDF histórico como si fuera esta revisión.')
+    print('Exportar a PDF desde Word.')
 
 
 if __name__ == '__main__':
