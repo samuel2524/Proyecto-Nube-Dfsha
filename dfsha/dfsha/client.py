@@ -1,6 +1,7 @@
 """Librería cliente: parte, cifra, sube y reconstruye archivos. No conoce IPs de nodos."""
 import hashlib
 import os
+import random
 import threading
 import time
 import uuid
@@ -51,6 +52,17 @@ class DFS:
 
     # ---- plano de control ----
     def req(self, method, path, **kw):
+        """409 RETRY = el catálogo perdió la carrera por el epoch global; se reenvía el MISMO pedido
+        (mismo request_id/cuerpo, que el servidor trata como idempotente) con espera aleatoria creciente."""
+        for intento in range(8):
+            try:
+                return self._req_una_vez(method, path, **kw)
+            except Error as e:
+                if e.status != 409 or e.code != 'RETRY' or intento == 7:
+                    raise
+                time.sleep(random.uniform(0, 0.05 * 2 ** intento))   # hasta ~6 s en el último intento
+
+    def _req_una_vez(self, method, path, **kw):
         h = {'Authorization': f'Bearer {self.token}'} if self.token else {}
         err = None
         for i, m in enumerate(tuple(self.metas)):

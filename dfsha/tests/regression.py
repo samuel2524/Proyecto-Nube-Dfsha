@@ -121,6 +121,20 @@ class Regression(unittest.TestCase):
         holder.close()
         self.dfs.rm(self.file)                      # sin abort, la sesión fallida seguiría viva y rm daría 423
 
+    def test_concurrent_clients_survive_epoch_conflicts(self):
+        # Varios clientes compiten por el epoch global; sin reintento de 409 RETRY alguno fallaba.
+        from concurrent.futures import ThreadPoolExecutor
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / 'src'
+            source.write_bytes(os.urandom(17 << 20))           # 3 bloques por archivo
+            def subir(k):
+                client = DFS()
+                client.login('andres', 'clave123')
+                return client.put(str(source), f'{self.file}-{k}')['sha256']
+            with ThreadPoolExecutor(6) as pool:
+                hashes = list(pool.map(subir, range(6)))
+        self.assertEqual(len(set(hashes)), 1)
+
     def test_append_and_truncate_are_exclusive(self):
         self.seed(b'a')
         writer = self.opened_file(mode='a')
