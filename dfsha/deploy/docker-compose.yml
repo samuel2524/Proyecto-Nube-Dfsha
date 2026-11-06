@@ -1,0 +1,57 @@
+# Un archivo por VM; el script genera hosts.generated.json con extra_hosts para
+# CADA contenedor, además de /etc/hosts del anfitrión. No se usa DNS ficticio.
+services:
+  etcd:
+    profiles: [etcd]
+    image: quay.io/coreos/etcd:v3.5.17
+    container_name: dfsha-etcd
+    network_mode: host
+    restart: unless-stopped
+    volumes: ["../certs/${ETCD_NAME}:/certs:ro", "etcd:/etcd-data"]
+    environment:
+      ETCD_NAME: ${ETCD_NAME}
+      ETCD_ADVERTISE_CLIENT_URLS: https://${ETCD_NAME}.dfsha.internal:2379
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: https://${ETCD_NAME}.dfsha.internal:2380
+      ETCD_INITIAL_CLUSTER: etcd1=https://etcd1.dfsha.internal:2380,etcd2=https://etcd2.dfsha.internal:2380,etcd3=https://etcd3.dfsha.internal:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: dfsha-v2
+      ETCD_DATA_DIR: /etcd-data
+      ETCD_LISTEN_CLIENT_URLS: https://0.0.0.0:2379
+      ETCD_LISTEN_PEER_URLS: https://0.0.0.0:2380
+      ETCD_CLIENT_CERT_AUTH: 'true'
+      ETCD_TRUSTED_CA_FILE: /certs/ca.crt
+      ETCD_CERT_FILE: /certs/node.crt
+      ETCD_KEY_FILE: /certs/node.key
+      ETCD_PEER_CLIENT_CERT_AUTH: 'true'
+      ETCD_PEER_TRUSTED_CA_FILE: /certs/ca.crt
+      ETCD_PEER_CERT_FILE: /certs/node.crt
+      ETCD_PEER_KEY_FILE: /certs/node.key
+  meta:
+    profiles: [meta]
+    image: dfsha:revision
+    container_name: dfsha-meta
+    network_mode: host
+    restart: unless-stopped
+    command: python -m dfsha.metadata
+    volumes: ["../certs/${META_ID}:/certs:ro"]
+    env_file: meta.env
+    environment:
+      NODE_ID: ${META_ID}
+      ETCD_ENDPOINTS: https://etcd1.dfsha.internal:2379,https://etcd2.dfsha.internal:2379,https://etcd3.dfsha.internal:2379
+      DATA_NODES: '{"dn1":"dn1.dfsha.internal:50051","dn2":"dn2.dfsha.internal:50051","dn3":"dn3.dfsha.internal:50051","dn4":"dn4.dfsha.internal:50051"}'
+  dn:
+    profiles: [dn]
+    image: dfsha:revision
+    container_name: dfsha-dn
+    network_mode: host
+    restart: unless-stopped
+    command: python -m dfsha.datanode
+    volumes: ["../certs/${DN_ID}:/certs:ro", "dn:/data"]
+    environment:
+      NODE_ID: ${DN_ID}
+      NODE_ADDR: ${DN_ID}.dfsha.internal:50051
+      BLOCK_SIZE: ${BLOCK_SIZE:-8388608}
+      META_ENDPOINTS: https://meta1.dfsha.internal:8443,https://meta2.dfsha.internal:8443
+volumes:
+  etcd: {}
+  dn: {}

@@ -1,0 +1,2 @@
+# Solo la máquina administradora; no se instala en cada nodo.
+boto3>=1.35,<2
