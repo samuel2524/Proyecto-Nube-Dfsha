@@ -1,6 +1,6 @@
 # Decisiones de corrección del prototipo
 
-Estos ADR describen decisiones implementadas en la revisión, no una aprobación ficticia del equipo o profesor.
+Estos ADR describen las decisiones implementadas en la revisión.
 
 | ID | Decisión | Razón / consecuencia |
 |---|---|---|

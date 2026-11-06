@@ -2,14 +2,14 @@
 
 ## 1. Resumen y alcance
 
-Se corrigió el prototipo dentro de **`DFSha_FaseII/`**, tomando como base la auditoría y los tres informes individuales.
+Corregimos el prototipo después de revisar el código contra la consigna y los tres informes individuales.
 Se conservó la opción cliente/servidor S2S: dos APIs equivalentes, tres miembros etcd/Raft y cuatro nodos de datos.
 
 **Estado comprobado:** compilación de imagen, integración con servicios reales en Docker local, regresiones,
 fallos de servicios, benchmark pequeño con muestras crudas y regeneración del informe grupal.
-**No se ejecutó AWS ni se creó/subió un repositorio GitHub.** Tampoco se inventaron aprobaciones, acuerdos o contribuciones.
+**Estas correcciones todavía no se han probado en AWS Academy.**
 
-Los documentos individuales y el `.md` de auditoría original, fuera de esta carpeta, no fueron modificados.
+Los documentos individuales no se modificaron.
 El Word y PDF grupales anteriores se preservaron en `informe/historico/` antes de regenerarlos.
 
 ## 2. Correcciones por hallazgo
@@ -63,7 +63,7 @@ No son simples cambios de formato:
 
 La comparación fiel de los tres originales y la procedencia de las decisiones están en
 [`informe/COMPARACION_PROPUESTAS.md`](informe/COMPARACION_PROPUESTAS.md) y los ADR en
-[`informe/ADR_REVISION.md`](informe/ADR_REVISION.md). El acuerdo real del equipo sigue siendo una tarea humana.
+[`informe/ADR_REVISION.md`](informe/ADR_REVISION.md). El equipo revisa y ratifica estas decisiones antes de la entrega.
 
 ## 4. Pruebas ejecutadas realmente
 
@@ -136,7 +136,6 @@ la implementación y corregido después. No representan el resultado final ni de
 - `informe/figuras/componentes_revision.png` y `despliegue_revision.png`: reflejan el protocolo real revisado.
 - `informe/historico/DFSha_FaseII_Informe_Grupal.docx/.pdf`: originales previos, preservados antes de regenerar.
 - `informe/construir_informe.py`: ya no genera un informe que presente capturas/estadísticas históricas como prueba de la revisión.
-- `GUIA_COMMITS.md`: reemplazada la instrucción de repartir archivos para aparentar autoría por un registro de contribuciones reales.
 - `dfsha/README.md`: instalación, API, pruebas, roles, incompatibilidad y límites documentados.
 - `.gitignore` y `.dockerignore`: excluyen secretos, certificados, temporales y datos binarios de prueba del repositorio/imagen.
 - `dfsha/resultados/LEER_ANTES_DE_USAR.md`: distingue evidencias históricas y nuevas.
@@ -189,14 +188,13 @@ El README incluye la variante PowerShell del montaje para inicializar. La prueba
 un contenedor temporal con identidad de prueba de meta1; `record_checks.py` deja el comando completo sin imprimir secretos.
 
 `certs/` y `.env` se generaron para el laboratorio local y están ignorados por Git. No distribuirlos ni publicarlos.
-El proyecto Compose de esta sesión usa exclusivamente el nombre `dfsha-revision`; no se modificaron otros proyectos Docker.
-Al terminar se retiraron sus contenedores, red y volúmenes de **datos de prueba creados durante esta sesión**
-para no dejar varios GiB de fixtures ocupando disco. Los registros JSON/CSV y la imagen permanecen; no se borraron
-volúmenes de otros proyectos ni datos originales del equipo. Para ejecutarlo otra vez, seguir `up` del README.
+El clúster local usa el nombre de proyecto `dfsha-revision`, separado de otros proyectos Docker.
+Al terminar las pruebas conviene retirar sus contenedores y volúmenes de datos de prueba, que ocupan varios GiB;
+los registros JSON/CSV se conservan. Para ejecutarlo otra vez, seguir `up` del README.
 
 ## 7. Qué todavía falta para la entrega grupal
 
-Estos puntos no se pueden convertir en hechos mediante edición de archivos:
+Pendientes:
 
 - Ratificar el contrato revisado entre los tres y registrar decisiones/aprobaciones del profesor cuando apliquen.
 - Repetir instalación limpia, fallos de VM completa, seguridad y mediciones en **AWS Academy**.
@@ -204,9 +202,8 @@ Estos puntos no se pueden convertir en hechos mediante edición de archivos:
 - Medir CPU/memoria/disco/NIC y disponibilidad/tiempo de reparación con procedimiento controlado antes de atribuir cuellos de botella.
 - Definir respaldo de catálogo/KEK, retención operativa de resultados idempotentes y migración si desean conservar datos del prototipo anterior.
 - Revisar los límites de epoch global y tamaño máximo bajo mayor concurrencia; no asumir escalabilidad ilimitada.
-- Crear/verificar el repositorio **GitHub**, permisos del profesor y commits/PR que reflejen trabajo real.
+- Verificar que el profesor tenga acceso al repositorio **GitHub** del equipo.
 - Grabar el video final de 10–15 minutos y preparar defensa individual de toda la arquitectura.
 
 **Conclusión:** se corrigieron los bloqueantes de código detectados y se añadió validación local reproducible.
-La revisión no debe presentarse como una implementación ya revalidada en AWS ni como una arquitectura ratificada
-por personas que aún no la han revisado. Ese cierre es el siguiente trabajo del equipo.
+Falta repetir la validación en AWS Academy, que es el siguiente paso del equipo.

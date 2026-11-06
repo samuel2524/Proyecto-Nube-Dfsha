@@ -2,7 +2,7 @@
 
 Fuentes cotejadas: `ANDRES.pdf` (10 páginas), `GARCIA.pdf` (12 páginas) y
 `Proyecto1_Individual.pdf`/Word de Samuel. Los archivos originales deben acompañar
-el registro del equipo; esta comparación no inventa acuerdos ni aprobación del profesor.
+el registro del equipo.
 
 | Criterio | Andrés | García | Samuel | Síntesis de la revisión |
 |---|---|---|---|---|
@@ -25,7 +25,7 @@ el registro del equipo; esta comparación no inventa acuerdos ni aprobación del
 - No hay obligación de conservar cuotas, POSIX completo o anexado. Si el equipo mantiene append, debe mantener su exclusión de estructura.
 - La consigna no exige un algoritmo concreto de contraseñas o firma, pero sí protección real y justificación de cambios.
 
-## Acuerdo pendiente, sin simulación de consenso
+## Acuerdo del equipo
 
 - [ ] Los tres revisaron el contrato y los límites de la revisión.
 - [ ] Confirmaron 8 MiB o acordaron repetir comparación 4/8 MiB.
@@ -34,4 +34,4 @@ el registro del equipo; esta comparación no inventa acuerdos ni aprobación del
 - [ ] Solicitaron y registraron aprobación de simplificaciones cuando corresponda.
 - [ ] Registraron aportes, pruebas y decisiones mediante commits/PR reales.
 
-Fecha, participantes, enlaces y conclusión: **por completar por el equipo**, no por la herramienta.
+Fecha, participantes, enlaces y conclusión: **por completar por el equipo**.

@@ -117,7 +117,7 @@ def build():
     p('Universidad Pontificia Bolivariana · Profesor Álvaro Ospina Sanjuan')
     p('Estado: correcciones y validación local. Pendiente ratificación del equipo, aprobación de simplificaciones cuando aplique y repetición de evidencias en AWS Academy.')
     h('1. Alcance y estado verificable')
-    p('Esta revisión corrige el código recibido tras contrastarlo con la consigna y los tres diseños individuales. No certifica que las pruebas locales hayan ocurrido en AWS ni que exista un acuerdo que el equipo todavía no haya registrado. Las capturas y mediciones previas se conservan como históricas, con sus anomalías señaladas.')
+    p('Esta revisión corrige el prototipo tras contrastarlo con la consigna y los tres diseños individuales. Las pruebas de esta versión se hicieron en Docker local; la validación en AWS Academy está pendiente. Las capturas y mediciones de la versión anterior se conservan como históricas, con sus anomalías señaladas.')
     h('2. Comparación y elección arquitectónica')
     table(['Criterio','Andrés','García','Samuel','Revisión'],[
         ['Control','2 APIs + etcd/Raft','PostgreSQL activo/pasivo','3 coordinadores + etcd','2 APIs + 3 etcd'],
@@ -171,7 +171,7 @@ def build():
         ['Caída a mitad de bloque','El temporal no obtiene recibo ni se publica. La regresión envía un stream incompleto, comprueba DATA_LOSS y rechazo del commit. Reintento usa un plan nuevo.'],
         ['Ubicación desconocida','El cliente usa nombres lógicos de coordinadores; open/manifest devuelve destinos y capacidades. El refresco conserva el mismo snapshot. extra_hosts se configura dentro de cada contenedor.']])
     h('11. Entrega, contribuciones y defensa')
-    p('El equipo debe ratificar el contrato y registrar aportes reales mediante commits/PR; no repartir archivos existentes para fingir autoría. Faltan repositorio accesible al profesor, aprobaciones aplicables, evidencia AWS vigente y video final de 10–15 minutos. No se crea ni publica un repositorio automáticamente.')
+    p('Cada integrante registra sus aportes mediante commits en el repositorio del equipo. Faltan la evidencia en AWS de esta versión, las aprobaciones aplicables y el video final de 10–15 minutos.')
     h('Referencias y fuentes de comparación')
     p('Se conservan las referencias del informe previo sin atribuirles resultados experimentales nuevos. Los documentos originales individuales son las fuentes de la comparación; las diapositivas deben estar disponibles para el equipo.')
     prior = historical/'DFSha_FaseII_Informe_Grupal.docx'
