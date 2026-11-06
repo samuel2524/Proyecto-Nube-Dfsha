@@ -1,0 +1,96 @@
+# Desarrollo aislado. La entrega final debe repetirse sobre VMs de AWS Academy.
+x-etcd: &etcd
+  image: quay.io/coreos/etcd:v3.5.17
+  environment: &etcdenv
+    ETCD_INITIAL_CLUSTER: etcd1=https://etcd1.dfsha.internal:2380,etcd2=https://etcd2.dfsha.internal:2380,etcd3=https://etcd3.dfsha.internal:2380
+    ETCD_INITIAL_CLUSTER_STATE: new
+    ETCD_INITIAL_CLUSTER_TOKEN: dfsha-v2
+    ETCD_DATA_DIR: /etcd-data
+    ETCD_LISTEN_CLIENT_URLS: https://0.0.0.0:2379
+    ETCD_LISTEN_PEER_URLS: https://0.0.0.0:2380
+    ETCD_CLIENT_CERT_AUTH: 'true'
+    ETCD_TRUSTED_CA_FILE: /certs/ca.crt
+    ETCD_CERT_FILE: /certs/node.crt
+    ETCD_KEY_FILE: /certs/node.key
+    ETCD_PEER_CLIENT_CERT_AUTH: 'true'
+    ETCD_PEER_TRUSTED_CA_FILE: /certs/ca.crt
+    ETCD_PEER_CERT_FILE: /certs/node.crt
+    ETCD_PEER_KEY_FILE: /certs/node.key
+x-app: &app
+  build: .
+  image: dfsha:revision
+x-env: &env
+  BLOCK_SIZE: ${BLOCK_SIZE:-8388608}
+  SESSION_TTL: ${SESSION_TTL:-60}
+  GC_GRACE: ${GC_GRACE:-600}
+x-meta: &meta
+  <<: *app
+  command: python -m dfsha.metadata
+  env_file: .env
+  environment: &metaenv
+    <<: *env
+    ETCD_ENDPOINTS: https://etcd1.dfsha.internal:2379,https://etcd2.dfsha.internal:2379,https://etcd3.dfsha.internal:2379
+    DATA_NODES: '{"dn1":"dn1.dfsha.internal:50051","dn2":"dn2.dfsha.internal:50051","dn3":"dn3.dfsha.internal:50051","dn4":"dn4.dfsha.internal:50051"}'
+x-dn: &dn
+  <<: *app
+  command: python -m dfsha.datanode
+  environment: &dnenv
+    <<: *env
+    META_ENDPOINTS: https://meta1.dfsha.internal:8443,https://meta2.dfsha.internal:8443
+services:
+  etcd1:
+    <<: *etcd
+    environment: {<<: *etcdenv, ETCD_NAME: etcd1, ETCD_ADVERTISE_CLIENT_URLS: 'https://etcd1.dfsha.internal:2379', ETCD_INITIAL_ADVERTISE_PEER_URLS: 'https://etcd1.dfsha.internal:2380'}
+    volumes: [./certs/etcd1:/certs:ro, etcd1:/etcd-data]
+    networks: {red: {aliases: [etcd1.dfsha.internal]}}
+  etcd2:
+    <<: *etcd
+    environment: {<<: *etcdenv, ETCD_NAME: etcd2, ETCD_ADVERTISE_CLIENT_URLS: 'https://etcd2.dfsha.internal:2379', ETCD_INITIAL_ADVERTISE_PEER_URLS: 'https://etcd2.dfsha.internal:2380'}
+    volumes: [./certs/etcd2:/certs:ro, etcd2:/etcd-data]
+    networks: {red: {aliases: [etcd2.dfsha.internal]}}
+  etcd3:
+    <<: *etcd
+    environment: {<<: *etcdenv, ETCD_NAME: etcd3, ETCD_ADVERTISE_CLIENT_URLS: 'https://etcd3.dfsha.internal:2379', ETCD_INITIAL_ADVERTISE_PEER_URLS: 'https://etcd3.dfsha.internal:2380'}
+    volumes: [./certs/etcd3:/certs:ro, etcd3:/etcd-data]
+    networks: {red: {aliases: [etcd3.dfsha.internal]}}
+  meta1:
+    <<: *meta
+    environment: {<<: *metaenv, NODE_ID: meta1}
+    volumes: [./certs/meta1:/certs:ro]
+    networks: {red: {aliases: [meta1.dfsha.internal, meta.dfsha.internal]}}
+  meta2:
+    <<: *meta
+    environment: {<<: *metaenv, NODE_ID: meta2}
+    volumes: [./certs/meta2:/certs:ro]
+    networks: {red: {aliases: [meta2.dfsha.internal, meta.dfsha.internal]}}
+  dn1:
+    <<: *dn
+    environment: {<<: *dnenv, NODE_ID: dn1, NODE_ADDR: 'dn1.dfsha.internal:50051'}
+    volumes: [./certs/dn1:/certs:ro, dn1:/data]
+    networks: {red: {aliases: [dn1.dfsha.internal]}}
+  dn2:
+    <<: *dn
+    environment: {<<: *dnenv, NODE_ID: dn2, NODE_ADDR: 'dn2.dfsha.internal:50051'}
+    volumes: [./certs/dn2:/certs:ro, dn2:/data]
+    networks: {red: {aliases: [dn2.dfsha.internal]}}
+  dn3:
+    <<: *dn
+    environment: {<<: *dnenv, NODE_ID: dn3, NODE_ADDR: 'dn3.dfsha.internal:50051'}
+    volumes: [./certs/dn3:/certs:ro, dn3:/data]
+    networks: {red: {aliases: [dn3.dfsha.internal]}}
+  dn4:
+    <<: *dn
+    environment: {<<: *dnenv, NODE_ID: dn4, NODE_ADDR: 'dn4.dfsha.internal:50051'}
+    volumes: [./certs/dn4:/certs:ro, dn4:/data]
+    networks: {red: {aliases: [dn4.dfsha.internal]}}
+  cliente:
+    <<: *app
+    command: sleep infinity
+    environment:
+      DFSHA_META: https://meta1.dfsha.internal:8443,https://meta2.dfsha.internal:8443
+      CA_CERT: /certs/ca.crt
+    volumes: [./certs/cliente:/certs:ro, ./tests:/app/tests, ./resultados:/app/resultados]
+    networks: {red: {aliases: [cliente.dfsha.internal]}}
+networks:
+  red: {}
+volumes: {dn1: {}, dn2: {}, dn3: {}, dn4: {}, etcd1: {}, etcd2: {}, etcd3: {}}
