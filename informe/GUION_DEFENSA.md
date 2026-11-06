@@ -1,128 +1,99 @@
-# Preparación de la defensa
+# Preparación de la defensa grupal e individual
 
-La defensa es individual aunque el producto sea grupal: el profesor puede preguntar a cualquiera
-sobre cualquier componente. Regla de oro: cada integrante explica la arquitectura completa y solo
-entra en detalle en lo que le tocó revisar. Nadie lee diapositivas ni respuestas memorizadas.
+Responder con el contrato actual y las evidencias AWS del 6 de noviembre de 2026.
+La suite final aportada reporta 19 casos sin fallos, errores u omitidos; el benchmark completo tiene 80 muestras.
+Todos deben poder explicar cualquier componente, no solo la carpeta que integraron.
 
-## Respuestas de 30 segundos
+## Preguntas principales
 
-### ¿Por qué la opción 1 y no un diseño tipo HDFS?
+### ¿Qué arquitectura escogimos y por qué?
 
-Porque la opción asignada es cliente/servidor S2S y el prototipo ya separa control y datos. El
-cliente hace partición y cifrado; dos APIs equivalentes concentran metadatos; cuatro nodos guardan
-bloques y se comunican entre sí. Se parece a HDFS en separar metadatos de datos, pero no se copia su
-modelo de un único NameNode: aquí hay dos coordinadores y consenso con etcd.
+Cliente/servidor S2S con control y datos separados. Dos APIs equivalentes comparten un catálogo etcd/Raft de
+tres miembros; cuatro nodos almacenan bloques. La base de Andrés facilita HA del catálogo y paralelismo,
+reforzada por versión esperada de García y sesiones lectoras renovables de Samuel. Se tomó una combinación
+de mecanismos; ninguna propuesta se considera perfecta por sí sola.
 
-### ¿Por qué dos APIs y tres etcd?
+### ¿Qué relación tiene con HDFS?
 
-Dos APIs evitan un único punto de fallo en el plano de control; ambas son equivalentes y comparten
-catálogo. Tres etcd permiten tolerar una caída manteniendo cuórum (2 de 3). Con dos coordinadores no
-se necesita que ambos estén vivos para leer el catálogo, y el cliente reintenta contra el otro
-endpoint lógico.
+La separación de metadatos y transferencia de datos es una referencia común. DFSha usa etcd/Raft para su catálogo
+y un contrato propio de sesiones, capacidades y recibos. HDFS no es una alternativa a la opción 1: también es un
+sistema distribuido cliente/servidor. No reducir HDFS moderno a un único NameNode sin alta disponibilidad.
+
+### ¿Por qué dos coordinadores y tres etcd?
+
+Un coordinador disponible puede atender solicitudes. Los tres etcd votan y requieren mayoría de dos para operar;
+no hay un cuórum de dos coordinadores. El cliente puede cambiar al otro endpoint de control.
 
 ### ¿Por qué cuatro nodos de datos?
 
-Con R=3 se necesitan al menos tres copias por bloque; el cuarto nodo permite seguir aceptando
-escrituras y reparando cuando uno se cae, sin bajar de dos réplicas disponibles. Menos nodos
-obligarían a R=2 o a degradar disponibilidad.
+Tres nodos permiten R=3 inicialmente, pero si uno cae solo quedan dos para almacenar copias. El cuarto permite
+restaurar tres copias en nodos vivos tras una caída. No decir que tres nodos obligan a R=2 en operación normal.
 
-### ¿Qué significa exactamente “escritura confirmada”?
+### ¿Cuándo se confirma una escritura?
 
-Que el cierre publicó la versión con al menos dos recibos Ed25519 de nodos distintos, que el
-coordinador verificó identidad, plan, bloque, operación, tamaño y hash, y que el CAS de sesión y
-referencias tuvo éxito. Antes de eso, los bloques son temporales o no publicados.
+Cuando los bloques afectados están preparados con dos recibos persistentes de nodos distintos verificados por el
+coordinador y el cierre publica el manifiesto mediante CAS. Los recibos solos no hacen visible una versión.
 
-### ¿Es linealizable?
+### ¿Qué evita una base vieja?
 
-No se declara linealizable. Se ofrece consistencia por bloque: lectores trabajan sobre un snapshot
-con lease; escritores usan locks por bloque y reciben 409 si la base cambió desde `open`. La
-publicación es un CAS sobre el catálogo. Es una garantía comprobable y más débil que linealizabilidad
-global, y así se dice en el informe.
+Al adquirir el lock de un bloque en rw, se compara su ID actual con el observado en open. Si cambió, se devuelve
+409 VERSION_CONFLICT y el cliente debe reabrir/releer. Bloques distintos pueden avanzar y fusionarse al publicar;
+no hay que rechazar una escritura solo porque cambió otro bloque del archivo.
 
-### ¿Qué pasa si se cae un nodo de datos?
+### ¿Cuál es la consistencia ofrecida?
 
-El monitor deja de recibir latidos firmados: sospechoso a los 10 s, caído a los 30 s. Las lecturas
-usan las réplicas vivas del snapshot; el monitor repara el nodo con el hash autorizado del catálogo.
-Si el nodo vuelve con contenido distinto, no se registra como reparado.
+Catálogo consistente mediante etcd, publicación atómica y lecturas sobre un snapshot fijado en open. Las aperturas
+posteriores a la confirmación ven la versión nueva. No se presume semántica POSIX completa ni linealizabilidad
+global de todas las operaciones sin una especificación y verificación formal adicionales.
 
-### ¿Y si se pierde el cuórum de etcd?
+### ¿Qué ocurre si desaparece un cliente?
 
-Las operaciones de catálogo fallan cerrado con 503. No se aceptan escrituras “a medias” ni se inventa
-un catálogo local. Al volver el cuórum, el servicio se recupera.
+Su sesión y locks comparten un lease de 60 s renovado cada 10 s. Al vencer no puede publicar. El lector que deja
+de renovar pierde el derecho a retener indefinidamente su snapshot. La gracia del GC complementa las referencias;
+no las reemplaza.
 
-### ¿El cliente confía en lo que dicen los nodos?
+### ¿Qué fallos se probaron en AWS?
 
-No. Cada nodo firma su recibo y el coordinador exige dos firmantes distintos. Un recibo duplicado o
-falso recibe 409 `BAD_RECEIPT` y no se publica. El cliente tampoco puede declarar W por su cuenta: el
-plan queda registrado por bloque.
+Detención de dn1, de meta1, de un miembro etcd y luego de dos miembros. Se comprobaron lectura/escritura con
+réplicas disponibles, reparación, uso del otro coordinador, 503 sin cuórum y lectura posterior al restaurar.
+Se detuvieron contenedores, no instancias EC2 completas ni discos.
 
-## Preguntas por bloque
+### ¿Cuánto tardó la reparación?
 
-| Pregunta probable | Respuesta corta | Dónde mostrarlo |
-|---|---|---|
-| ¿Cómo se parte un archivo? | Bloques de 8 MiB; el último puede ser menor; `MAX_BLOCKS=8192` limita 64 GiB. | `common.py`, `client.py` |
-| ¿Cómo se elige el nodo? | El coordinador devuelve destinos y capacidades; el cliente no conoce IPs. | `metadata.py` `open`/`manifest` |
-| ¿Qué pasa si se reenvía el mismo bloque? | Es idempotente si el contenido coincide; si difiere, se rechaza. | `datanode.py` `WriteBlock` |
-| ¿Cómo se evita un lector de un bloque borrado? | El GC espera gracia y vencimiento de capacidades, y revalida referencias antes de borrar. | `metadata.py` GC |
-| ¿Cómo se libera un lock si el cliente muere? | El lease de la sesión vence a los 60 s y elimina sesión y locks juntos. | `metadata.py`, ADR R03 |
-| ¿Por qué 423 y no 409 en `rm`/`rename`? | 423 indica recurso bloqueado por sesión activa; 409 se usa para conflicto de versión. | `metadata.py` |
-| ¿`rename` es atómico? | Hasta 48 entradas por operación; por encima responde 413. | `metadata.py` `rename` |
-| ¿`close` es idempotente? | Mismo `fd` y mismo cuerpo recuperan la versión publicada; otro cuerpo recibe 409. | `metadata.py` `close` |
-| ¿Cómo se protege la KEK? | Solo se carga en coordinadores; nodos y clientes no la reciben. | `gen_certs.py`, `docker-compose` |
-| ¿Qué contiene un certificado? | Identidad por servicio; la CA de etcd solo emite a miembros y coordinadores. | `scripts/gen_certs.py` |
-| ¿Cómo se autentica un usuario? | Login con scrypt (N=32768, r=8, p=3) y JWT EdDSA de 15 min sobre TLS. | `metadata.py`, `common.py` |
-| ¿Qué pasa si roban un nodo? | No obtiene KEK ni credenciales de etcd; solo ve bloques cifrados y su propia llave. | informe §7 |
-| ¿El hash global se mantiene tras `rw`? | No: queda `null` y se dice explícitamente; se valida el manifiesto. | `dfsha/README.md` |
-| ¿Por qué el p95 es el máximo? | Con cinco muestras el percentil por rango cercano cae en el máximo; no caracteriza colas. | informe §9 |
-| ¿Por qué R=2 no duplica el rendimiento? | El cuello está en coordinación, cifrado y publicación, no solo en una réplica menos. | `summary.csv` |
-| ¿Qué falta para AWS? | Despliegue real, caídas de VM, red privada, benchmark final y video. | informe §11 |
+La primera confirmación exitosa aparece unos 41,4 s después de finalizar el comando que detuvo dn1. Incluye
+detección y espera entre sondeos; no es el tiempo puro de copia ni el instante exacto de restauración.
+Los 6,83 s sumados de consultas fallidas no son una medición válida de ese intervalo.
 
-## Preguntas trampa y cómo salir
+### ¿Ya se demostró AWS?
 
-- **“Demuéstreme que esto corrió en AWS”.** No se puede: la versión está validada en Docker local.
-  Mostrar `regression.json` con `environment: local Docker (no AWS)` y decir que el despliegue en
-  Academy sigue pendiente. Inventar una captura sería peor que reconocerlo.
-- **“¿Implementaron Raft?”.** No. Se usa etcd, que implementa Raft; el aporte es el contrato de
-  metadatos, las capacidades y la verificación de recibos.
-- **“¿Entonces el cifrado no sirve porque el servidor ve la DEK?”.** El modelo protege el canal, el
-  almacenamiento en nodos y el acceso por rol; el coordinador descifra mientras atiende la sesión.
-  No se promete cifrado extremo a extremo resistente al servidor.
-- **“¿Por qué no hay pipeline paralelo?”.** La réplica S2S de esta revisión es secuencial desde un
-  bloque validado; se declara como límite y como costo a medir, no como virtud.
-- **“¿Cómo sé que el commit que subió es suyo?”.** Mostrar `git log --author` y explicar qué revisó,
-  qué probó y qué cambió; el commit de carga no sustituye la explicación.
-- **“¿Qué pasa con dos escritores en bloques distintos?”.** Avanzan en paralelo; el lock es por
-  bloque. El conflicto aparece al publicar si la base cambió, y se resuelve reabriendo.
-- **“¿Qué pasa si se cae el coordinador que atiende?”.** El cliente reintenta contra el otro endpoint
-  con IDs estables; la sesión y el catálogo viven en etcd, no en memoria del proceso.
-- **“¿Por qué no PostgreSQL como en otra propuesta?”.** Se comparó: PostgreSQL activo/pasivo no daba
-  consenso de catálogo ni toleraba la caída del primario sin intervención. etcd/Raft ya resuelve
-  elección y quórum; el equipo priorizó corrección y disponibilidad del catálogo.
+Se aportaron capturas de servicios y operaciones entre cuatro VMs, regresión de 19 casos, registro de fallos y
+benchmark completo con muestras. Mostrar esa evidencia y explicar cómo se produjo. No usar la corrida local como
+si fuera AWS y no afirmar que una captura garantiza propiedades que la prueba no ejercitó.
 
-## Demostración mínima para tener abierta
+## Respuestas técnicas breves
 
-```bash
-cd dfsha
-docker compose -p dfsha-revision -f docker-compose.local.yml ps
-docker compose -p dfsha-revision -f docker-compose.local.yml exec cliente python -m dfsha.cli nodes
-docker compose -p dfsha-revision -f docker-compose.local.yml exec cliente python -m dfsha.cli stat /demo.bin
-```
-
-Y en el editor: `metadata.py` (`open_`, `close`, GC), `datanode.py` (`WriteBlock`), `client.py`
-(`put`), `common.py` (`sign`, `verify_node`). Tener también abiertos `informe/ADR_REVISION.md` y
-`summary.csv`.
+| Tema | Respuesta |
+|---|---|
+| Tamaño de bloque | Hasta 8 MiB; último menor. No se probó aún superioridad frente a 4 MiB. |
+| R y W | R=3 objetivo; W=2 recibos persistentes distintos para preparar. R=2 solo comparación declarada. |
+| Recibo falso | El coordinador valida firma, nodo, bloque, operación, tamaño y hash; rechaza con BAD_RECEIPT. |
+| Inmutabilidad | Un ID publicado no cambia de contenido. Cada modificación crea otro bloque. |
+| w/rw/a | w trunca, rw modifica por bloques y a anexa. w/a excluyen otros escritores. |
+| rm/rename | 423 mientras haya escritores activos; lectores previos pueden conservar snapshot vigente. |
+| Cierre repetido | Mismo fd/cuerpo devuelve resultado ya publicado; otro cuerpo recibe conflicto. |
+| RETRY | Se reintenta con el mismo pedido y espera aleatoria acotada. VERSION_CONFLICT no se oculta. |
+| Protección de claves | Cliente y nodos no reciben KEK ni credenciales del catálogo. |
+| DEK | El coordinador la entrega al cliente autorizado; el modelo confía en ese servicio. |
+| Hash global tras rw/a | No se recalcula; se declara null. Se mantienen hashes de bloques y manifiesto y GCM. |
+| P95 | Con cinco muestras y rango cercano, es el máximo de la muestra. |
+| Rendimiento | Exponer tasas medidas; no atribuir CPU/red como causa concluyente sin instrumentación. |
+| Límite de metadatos | El epoch global prioriza corrección, pero causa contención y debe medirse bajo carga. |
+| Comparación pendiente | 3/4 nodos, 4/8 MiB y recursos; variar clientes no equivale a variar nodos. |
 
 ## Ensayo
 
-1. Ronda de 20 minutos: cada uno responde tres preguntas al azar de la tabla, sin mirar el informe.
-2. Ronda de 10 minutos: explicar la figura de componentes en el tablero, en menos de dos minutos.
-3. Ronda de 5 minutos: cada uno cuenta su aporte real y el de los compañeros, con commit y prueba.
-4. Ajustar solo las respuestas que quedaron largas; no memorizar texto.
-
-## Errores que bajan la nota
-
-- Decir “está en AWS” sin despliegue.
-- Confundir 409 (conflicto de versión) con 423 (recurso bloqueado) o con 503 (sin cuórum).
-- Afirmar que el cliente guarda la KEK o que los nodos ven el texto plano.
-- Presentar el benchmark de 5 muestras como caracterización de colas.
-- No saber qué archivo o commit propio defender.
+1. Cada uno explica la figura de componentes y una secuencia completa de escritura en dos minutos.
+2. Otro integrante pregunta por un fallo: base vieja, ACK falso, lease vencido, bloque parcial o pérdida de cuórum.
+3. Mostrar un comando y su salida esperada; distinguir 401, 403, 404, 409, 423 y 503.
+4. Relacionar cada resultado del informe con su prueba y las limitaciones de esa evidencia.
+5. Revisar contribuciones reales y tener el repositorio y el video accesibles al profesor.

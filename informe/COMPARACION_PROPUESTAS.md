@@ -15,7 +15,7 @@ el registro del equipo.
 | Publicación | Tabla API separa commit/close pero semántica los une (§§5.1,6) | Versión esperada y publicación confirmada (§6.3) | Transacción de bloqueo/versión base (§5.3) | Se elige publicar en close; resultado recuperable por operación y transacción acotada. |
 | Integridad | SHA por bloque/global, GCM (§§4,7) | SHA por bloque/global y reconciliación (§§4.5,8.4) | SHA por bloque/global (§3.5) | Hash de bloque cifrado, GCM, hash de manifiesto; hash plano global en put/w. No se afirma recalcularlo en rw/a. |
 | Seguridad | Argon2id, RS256, DEK/KEK, mTLS (§9) | Argon2id, RS256, DEK/KEK y AAD (§9) | Argon2id, TLS/mTLS, AES-GCM (§7) | scrypt parametrizado, firmas Ed25519 separadas, CA de catálogo aislada y KEK solo en metadatos. Requiere revisión del equipo/profesor. |
-| Pruebas | Cinco repeticiones; 1 GiB; 3/4 nodos (§11) | Calentamiento y 30 mediciones (§10) | Cinco repeticiones y métricas de fallos (§8) | Regresión con aserciones, 129 bloques, fallos locales y muestras crudas; repetir y completar en AWS. |
+| Pruebas | Cinco repeticiones; 1 GiB; 3/4 nodos (§11) | Calentamiento y 30 mediciones (§10) | Cinco repeticiones y métricas de fallos (§8) | Registros AWS de 19 casos, 129 bloques, caídas de servicios y 80 muestras; faltan comparar 4/8 MiB y 3/4 nodos. |
 
 ## Decisiones y consecuencias
 

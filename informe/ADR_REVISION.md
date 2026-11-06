@@ -19,4 +19,6 @@ Estos ADR describen las decisiones implementadas en la revisión.
 | R13 | No migración automática del catálogo antiguo | El formato y las capacidades son incompatibles. Respaldar/exportar antes de instalar en volúmenes nuevos. |
 | R14 | Evidencias históricas conservadas, nuevos runs separados | El CSV incompatible no se retoca ni se usa para generar conclusiones de la revisión. Solo mediciones reales nuevas se publican como tales. |
 
-Estado: implementado/revisado localmente; falta consenso formal, despliegue y medición en AWS Academy.
+Estado: implementado, con pruebas locales y registros aportados de AWS Academy del 6 de noviembre de 2026
+(regresión, caídas de servicios y benchmark). La ratificación del equipo y las aprobaciones de cambios de alcance
+deben registrarse cuando correspondan; las comparaciones 4/8 MiB y 3/4 nodos siguen pendientes.

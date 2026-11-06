@@ -22,6 +22,17 @@ SONDA = ('cd ~/dfsha && CERTS=$HOME/dfsha/certs/cliente CA_CERT=$HOME/dfsha/cert
          '.venv/bin/python -m tests.fault_probe')
 
 
+def restore_all(stopped, start):
+    """Intentar TODOS los reinicios aunque uno falle; conservar errores para informar."""
+    errors = []
+    for vm, service in list(reversed(stopped)):
+        try:
+            start(vm, service)
+        except Exception as exc:
+            errors.append((vm, service, str(exc)))
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--key', required=True)
@@ -53,8 +64,11 @@ def main():
         return run('vm4', f'{SONDA} {action} {remote}', check, f'sonda {action}')
 
     def stop(vm, service):
+        # Registrar intención antes de SSH: si se pierde la respuesta después de
+        # detenerlo, finally debe intentar restaurarlo igualmente.
+        if (vm, service) not in stopped:
+            stopped.append((vm, service))
         run(vm, f'sudo docker stop dfsha-{service}', label=f'detener {service}')
-        stopped.append((vm, service))
 
     def start(vm, service):
         run(vm, f'sudo docker start dfsha-{service}', label=f'iniciar {service}')
@@ -81,8 +95,11 @@ def main():
         stop('vm2', 'etcd')                      # 1 de 3: sin quórum, el catálogo falla cerrado
         probe('unavailable')
     finally:
-        for vm, service in list(reversed(stopped)):
-            start(vm, service)
+        restore_errors = restore_all(stopped, start)
+        if restore_errors:
+            # Todos se intentaron antes de informar; no abandonar otros etcd detenidos.
+            details = '; '.join(f'{vm}/{service}: {error}' for vm, service, error in restore_errors)
+            raise RuntimeError('Servicios que no se pudieron restaurar: ' + details)
     time.sleep(10)
     probe('check')
     print('Caídas en AWS verificadas. Registro:', directory)

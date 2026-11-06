@@ -1,201 +1,172 @@
-# Guion del video demostrativo (10–15 minutos)
+# Guion del video demostrativo (10 a 15 minutos)
 
-El video debe mostrar arquitectura, ejecución distribuida, fallos y resultados medidos. No se puede
-presentar la corrida local como si fuera AWS: si la entrega se graba antes de desplegar en Academy,
-se dice explícitamente y se muestran los registros versionados como evidencia local.
+El video muestra la arquitectura y la ejecución distribuida en las cuatro VMs de AWS Academy.
+Usar los resultados del 6 de noviembre de 2026: regresión de 19 casos y benchmark completo de 80 muestras.
+Las pruebas locales anteriores sirven para desarrollo, no se presentan como si fueran AWS.
 
-## Antes de grabar
+## Preparación
 
-1. Docker Desktop corriendo y el repo clonado en `Proyecto-Nube-Dfsha/`.
-2. Clúster levantado y sano:
+1. Iniciar el Learner Lab, verificar las cuatro instancias y las IP actuales.
+2. Abrir dos sesiones SSH al bastión y una terminal del administrador para controlar servicios.
+3. En cada terminal del bastión, preparar el cliente Bash:
 
    ```bash
-   cd dfsha
-   docker build -t dfsha:revision .
-   docker run --rm -v "$PWD:/workspace" -w /workspace dfsha:revision python scripts/init_local.py
-   docker compose -p dfsha-revision -f docker-compose.local.yml up -d --no-build
-   docker compose -p dfsha-revision -f docker-compose.local.yml exec cliente python -m dfsha.cli login andres clave123
-   docker compose -p dfsha-revision -f docker-compose.local.yml exec cliente python -m dfsha.cli nodes
+   cd ~/dfsha
+   export CERTS="$PWD/certs/cliente"
+   export CA_CERT="$PWD/certs/cliente/ca.crt"
+   export DFSHA_META=https://meta1.dfsha.internal:8443,https://meta2.dfsha.internal:8443
+   dfsha() { .venv/bin/python -m dfsha.cli "$@"; }
    ```
 
-   En PowerShell, el `docker run` de inicialización usa:
+4. Consultar salud con el rol correcto y regresar al usuario de la demo:
 
-   ```powershell
-   docker run --rm --mount "type=bind,source=$((Get-Location).Path),target=/workspace" --workdir /workspace dfsha:revision python scripts/init_local.py
+   ```bash
+   dfsha login admin admin123
+   dfsha nodes
+   dfsha login andres clave123
    ```
 
-3. Cuatro terminales abiertas: `A` para comandos del cliente, `B` para `docker compose stop/start`,
-   `C` para logs (`docker compose logs -f meta1`), `D` para el editor con el código.
-4. Tener abiertos de antemano: `informe/figuras/componentes_revision.png`,
-   `dfsha/resultados/revision-bench-20261103T062822Z-73ae1d/summary.csv` y
-   `dfsha/resultados/revision-20261103T062535/regression.json`.
-5. Grabar a 1080p, micrófono cerca, notificaciones silenciadas y zoom del editor en 120 %. Duración
-   objetivo: 13 minutos. Ensayar una vez completo antes de la toma final.
+5. Mostrar las figuras y tablas del informe, con zoom legible. Tener disponible el resumen AWS final:
 
-## Reparto
+   ```bash
+   cat resultados/revision-20261106-023859/regression.json
+   cat resultados/revision-bench-20261106T022920Z-5b3b1b/summary.csv
+   ```
 
-| Bloque | Quién | Minutos |
+Las contraseñas de ejemplo corresponden al laboratorio. Si cambiaron al desplegar, usar las reales sin mostrar
+claves de AWS, llaves privadas ni el contenido de archivos de secretos. La CLI comparte el estado de login
+entre las sesiones SSH del mismo usuario Linux: no cambiar de usuario durante la demo concurrente.
+
+## Distribución sugerida
+
+| Tiempo | Responsable | Contenido |
 |---|---|---|
-| Presentación y alcance | Juan José | 1:00 |
-| Arquitectura y decisiones | Andrés | 2:30 |
-| Recorrido de código | Samuel | 2:30 |
-| Demo funcional | Juan José | 3:00 |
-| Fallos y consistencia | Andrés | 3:00 |
-| Métricas y límites | Samuel | 2:00 |
-| Cierre y contribuciones | Juan José | 1:00 |
+| 0:00 a 1:00 | Juan José | Objetivo, opción 1 y entorno AWS |
+| 1:00 a 3:00 | Andrés | Arquitectura, metadatos y elección de propuestas |
+| 3:00 a 6:00 | Samuel | Carga/descarga, hashes, lectura y modificación |
+| 6:00 a 9:00 | Juan José | Concurrencia y seguridad |
+| 9:00 a 12:00 | Andrés | Caída, reparación, failover y cuórum |
+| 12:00 a 14:00 | Samuel | Métricas, límites y resultados |
+| 14:00 a 15:00 | Los tres | Contribuciones y cierre |
 
-Todos deben poder responder por cualquier bloque; el reparto es solo para ordenar la grabación.
+## 1. Presentación
 
-## Bloque 1 — Presentación (0:00–1:00)
+Explicar con sus palabras:
 
-Decir, sin leer:
+> DFSha es un sistema de archivos distribuido cliente/servidor con comunicación S2S. Separamos control y datos:
+> dos coordinadores organizan operaciones sobre un catálogo etcd de tres miembros y cuatro nodos almacenan
+> los bloques. Mostramos la ejecución en AWS Academy y las pruebas registradas por el equipo.
 
-> Somos Andrés, Juan José y Samuel. Este es el proyecto DFSha, opción 1: cliente/servidor con
-> comunicación servidor a servidor. El video muestra la arquitectura, una ejecución real del clúster,
-> qué pasa cuando se cae un nodo y las mediciones que quedaron registradas. Aclaramos desde ya que la
-> validación de esta versión es local, en Docker; el despliegue en AWS Academy está pendiente y no lo
-> vamos a presentar como hecho.
+Mostrar servicios y direcciones privadas de las cuatro VMs. La presencia de contenedores encendidos se
+complementa con operaciones entre nodos; por sí sola no demuestra integridad ni disponibilidad.
 
-Mostrar en pantalla el árbol del repo (`README.md`, `dfsha/`, `informe/`) y el commit propio.
+## 2. Arquitectura
 
-## Bloque 2 — Arquitectura (1:00–3:30)
+Recorrer las figuras 1 y 2 del informe:
 
-Mostrar `informe/figuras/componentes_revision.png` y recorrer de izquierda a derecha:
+- Cliente a coordinadores por HTTPS; transferencia directa de bloques por gRPC/mTLS.
+- Dos APIs equivalentes; el cuórum está en los tres miembros etcd, no entre las dos APIs.
+- Bloques de hasta 8 MiB, tres copias objetivo y dos recibos firmados distintos para preparar cada bloque.
+- El cierre publica la versión mediante CAS; recibir dos ACK no publica automáticamente el archivo.
+- rw permite bloques distintos en paralelo y comprueba la versión base; w/a son exclusivos entre escritores.
+- El lector mantiene un snapshot con lease renovable; el GC respeta referencias vigentes.
+- S2S es secuencial desde un bloque validado. No afirmar que la réplica está solapada en pipeline.
 
-- El cliente no conoce direcciones de nodos: habla con dos APIs equivalentes por REST/HTTPS.
-- Las dos APIs comparten catálogo en tres etcd con Raft. Con dos de tres hay cuórum; al perder dos,
-  las operaciones fallan cerrado.
-- Hay cuatro nodos de datos. Cada bloque se parte a 8 MiB y se replica a tres nodos; el cierre exige
-  dos recibos firmados por nodos distintos.
-- El plano de datos usa gRPC con mTLS. La capacidad la firma el coordinador y cada nodo devuelve un
-  recibo Ed25519 con bloque, operación, tamaño y hash.
-- La KEK solo se carga en los coordinadores. El cliente cifra con una DEK por archivo y nunca recibe
-  credenciales de etcd.
+Explicar el aporte de las propuestas: base de Andrés, validación de base de García y retención por sesiones
+lectoras de Samuel. Las decisiones coincidentes, como S2S y snapshots, se reconocen como coincidencias.
 
-Justificar en una frase: dos APIs para no depender de un coordinador único, tres etcd para tolerar
-una caída manteniendo consenso, cuatro nodos para sostener R=3 y seguir leyendo con uno caído.
+## 3. Operaciones funcionales
 
-## Bloque 3 — Recorrido de código (3:30–6:00)
-
-Mostrar tres puntos cortos, sin perderse en funciones auxiliares:
-
-1. `dfsha/dfsha/client.py`, `put()`: parte el archivo, cifra cada bloque con AES-256-GCM usando el
-   `block_id` como AAD, pide capacidades y sube en paralelo.
-2. `dfsha/dfsha/datanode.py`, `WriteBlock()`: valida capacidad, tamaño y hash; escribe temporal,
-   sincroniza a disco, replica al siguiente nodo y solo entonces firma el recibo.
-3. `dfsha/dfsha/metadata.py`, `open_()` y `close()`: snapshot con lease, locks por bloque, CAS de
-   sesión y publicación con al menos dos recibos verificados.
-
-Mencionar `dfsha/proto/dfsha.proto` como contrato explícito: `WriteBlock`, `ReadBlock`,
-`ReplicateBlock`, `DeleteBlock`, `ListBlocks`.
-
-## Bloque 4 — Demo funcional (6:00–9:00)
-
-En la terminal `A`, con el alias `dc="docker compose -p dfsha-revision -f docker-compose.local.yml"`:
+En el bastión:
 
 ```bash
-# archivo de 10 MiB dentro del contenedor
-dc exec -T cliente python -c "import os;open('/tmp/demo.bin','wb').write(os.urandom(10*1024*1024))"
-
-# subir y ver el reparto
-dc exec -T cliente python -m dfsha.cli put /tmp/demo.bin /demo.bin
-dc exec -T cliente python -m dfsha.cli stat /demo.bin
-
-# recuperar y comparar hash
-dc exec -T cliente python -m dfsha.cli get /demo.bin /tmp/salida.bin
-dc exec -T cliente sh -c "sha256sum /tmp/demo.bin /tmp/salida.bin"
+dfsha login andres clave123
+dfsha mkdir /video
+head -c 10485760 /dev/urandom > /tmp/demo.bin
+dfsha put /tmp/demo.bin /video/demo.bin
+dfsha stat /video/demo.bin
+dfsha get /video/demo.bin /tmp/salida.bin
+sha256sum /tmp/demo.bin /tmp/salida.bin
+cmp /tmp/demo.bin /tmp/salida.bin
+dfsha write /video/notas.txt 0 'hola mundo'
+dfsha write /video/notas.txt 5 'MUNDO'
+dfsha append /video/notas.txt ' desde AWS'
+dfsha cat /video/notas.txt
 ```
 
-Salida esperada: `put 10.00 MiB en 2 bloques ... sha256 <hash>`, un `stat` con dos bloques y tres
-réplicas por bloque, y dos hashes iguales en `sha256sum`.
+Un archivo de 10 MiB tiene dos bloques a esta configuración: 8 MiB y 2 MiB, antes del overhead de cifrado.
+Los hashes de origen y destino deben coincidir. Mostrar que el estado lista ubicaciones en varios nodos.
+Si `/video` ya existe, explicar el 409 o utilizar una ruta nueva; no ocultar fallos inesperados.
 
-Concurrencia, en dos terminales:
+## 4. Concurrencia y seguridad
+
+Con el mismo usuario de aplicación en las dos terminales:
 
 ```bash
-# terminal 1: sostiene el lock 20 s
-dc exec -T cliente python -m dfsha.cli lock /demo.bin 0 1 --segundos 20
+# Terminal A
+dfsha write /video/demo.bin 0 'CLIENTE-A' --mantener 12
 
-# terminal 2: debe responder 423 FILE_BUSY
-dc exec -T cliente python -m dfsha.cli write /demo.bin 0 X
+# Terminal B, mientras A mantiene el lock
+dfsha write /video/demo.bin 0 'CLIENTE-B'
 ```
 
-Explicar: el lock es por bloque; bloques distintos pueden avanzar en paralelo, pero `rm`/`mv` sobre
-un archivo con escritores activos responde 423 hasta que cierren o venza el lease.
+Esperado: `423 BLOCK_LOCKED`. En otro intento con `--esperar`, si A publicó desde el open de B,
+B puede recibir `409 VERSION_CONFLICT`: debe reabrir/releer. No explicar ese conflicto como
+una pérdida de datos. La prueba registrada de bloques distintos muestra que ambos cambios se conservan.
 
-## Bloque 5 — Fallos y consistencia (9:00–12:00)
-
-Terminal `B`:
+Para seguridad, ejecutar la secuencia cuando ya terminaron los escritores:
 
 ```bash
-dc stop dn1
-dc exec -T cliente python -m dfsha.cli nodes
-dc exec -T cliente python -m dfsha.cli get /demo.bin /tmp/tras-fallo.bin
-dc start dn1
+dfsha logout
+dfsha ls /
+dfsha login laura clave123
+dfsha stat /video/demo.bin
+dfsha nodes
+dfsha login andres clave123
 ```
 
-Mostrar que `nodes` marca `dn1 caído`, que la lectura sigue funcionando con las otras réplicas y que
-al volver el nodo el monitor lo repara con el hash autorizado.
+Resultados: 401 sin sesión, 404 para archivo ajeno y 403 al consultar administración sin rol admin.
+Mostrar la captura de mTLS/tokens y explicar que KEK y credenciales etcd no están en el cliente.
 
-Luego, cuórum:
+## 5. Fallos y reparación
+
+Desde el administrador, detener únicamente el servicio previsto:
 
 ```bash
-dc stop etcd1
-dc exec -T cliente python -m dfsha.cli put /tmp/demo.bin /con-etcd1-caido.bin   # funciona: 2 de 3
-dc stop etcd2
-dc exec -T cliente python -m dfsha.cli put /tmp/demo.bin /sin-cuorum.bin        # 503
-dc start etcd1 etcd2
+ssh -i "<llave.pem>" ubuntu@<IP_VM1> 'sudo docker stop dfsha-dn'
 ```
 
-Cerrar el bloque con la regla: una escritura se considera confirmada cuando el cierre publica la
-versión con dos recibos distintos y el CAS de sesión; con pérdida de cuórum se falla cerrado, no se
-promete disponibilidad.
+En el bastión, recuperar y comparar el archivo. La consulta de nodos requiere iniciar sesión como admin;
+debe observarse la transición: sospechoso a los 10 s y caído a los 30 s, no inmediatamente.
+Mostrar después la reparación con tres réplicas válidas sin dn1, y restaurar:
 
-## Bloque 6 — Métricas (12:00–14:00)
+```bash
+ssh -i "<llave.pem>" ubuntu@<IP_VM1> 'sudo docker start dfsha-dn'
+```
 
-Abrir `summary.csv` y explicar la tabla del informe:
+Para respetar el tiempo del video, usar también el registro completo ya ejecutado: caída de meta1,
+un miembro etcd y pérdida de cuórum al detener dos miembros, con 503 y lectura correcta al restaurar.
+Decir que se detuvieron contenedores de servicios en VMs reales; no afirmar que se apagó una VM completa.
 
-- E1, R=3: put 0.99 s y 10.3 MiB/s; get 0.53 s y 20.1 MiB/s.
-- E2, R=2 frente a R=3 con W=2: el put mejora cerca de 7 %, no es el doble.
-- E3, dos clientes: la tasa agregada sube (14.8 MiB/s en put), pero la latencia por operación también;
-  no se presenta como escalabilidad lineal.
-- Cinco repeticiones: el p95 es el máximo observado, sirve como prueba de humo, no para caracterizar
-  colas.
+**Métrica que se explica:** la primera sonda exitosa se obtuvo aproximadamente 41,4 s después de finalizar
+la detención de dn1. Incluye detección y esperas. No decir que la reparación tardó exactamente siete segundos
+ni que se conoce el instante exacto entre consultas.
 
-Cerrar con lo que falta medir en AWS: 10/100/500 MiB y borde 1 GiB, comparación 3/4 nodos, 4/8 MiB en
-clústeres separados, CPU/memoria/disco/NIC y tiempo de reparación.
+## 6. Métricas y límites
 
-## Bloque 7 — Cierre (14:00–15:00)
+Usar la tabla AWS del informe:
 
-- Límites: catálogo v2 sin migración, `MAX_BLOCKS=8192`, rename atómico hasta 48 entradas, época
-  global que prioriza corrección sobre paralelismo masivo, réplica secuencial.
-- Evidencia: `regression.json` con 16 casos y hash `9632b34f...`, seis chequeos, registro de caídas y
-  benchmark con muestras crudas.
-- Contribuciones: cada integrante muestra su commit en GitHub.
-- Pendiente real: AWS Academy, video final y ratificación del equipo.
+- 500 MiB: aproximadamente 30,2 MiB/s de escritura y 96,5 MiB/s de lectura.
+- R=2/W=2: 37,2 MiB/s; R=3/W=2: 31,4 MiB/s. Describir la reducción medida, sin extrapolar a algoritmos no probados.
+- Escritura agregada con un cliente: 29,5 MiB/s; con ocho: 19,0 MiB/s. La contención es una explicación
+  compatible con RETRY, pero no se midió por separado CPU, NIC, disco o tiempo de reintentos.
+- Cinco repeticiones por condición: el p95 por rango cercano es el máximo observado.
+- Se conserva la corrida fallida y la corrección posterior; no se mezclan con la corrida completa.
 
-## Frases que no se deben decir
+Pendiente experimental: 4/8 MiB, 3/4 nodos y métricas de recursos. El video no debe anunciar esas comparaciones como hechas.
 
-- “Esto ya corrió en AWS” si no está desplegado.
-- “Es linealmente escalable” o “no tiene cuello de botella”.
-- “Raft lo implementamos nosotros”: se usa etcd, no se reimplementa consenso.
-- “El pipeline replica en paralelo”: la réplica de esta revisión es secuencial.
-- “Los datos están cifrados de extremo a extremo sin confiar en el servidor”: el coordinador ve la
-  DEK mientras atiende la sesión; el cliente no entrega la KEK.
+## Cierre
 
-## Plan B si algo falla en vivo
-
-- Si Docker no arranca: mostrar `docker version` con el error, pasar a los registros versionados y
-  explicar los comandos que los generaron. No improvisar una corrida falsa.
-- Si un contenedor queda inestable: `docker compose -p dfsha-revision -f docker-compose.local.yml ps`
-  y `logs --tail 50 <servicio>`; si no se recupera, reiniciar el proyecto y continuar desde el bloque 5.
-- Si el archivo de 10 MiB tarda: bajar a 2 MiB y decir el tamaño real que se está usando.
-
-## Checklist de edición
-
-- [ ] Audio inteligible y sin cortes entre bloques.
-- [ ] Se ve el comando y la salida completa (no solo el resultado).
-- [ ] Los hashes de `put`/`get` coinciden en pantalla.
-- [ ] Se muestra al menos una caída de nodo de datos y una de etcd.
-- [ ] Se muestra el `summary.csv` real, no una tabla inventada.
-- [ ] Se aclara local vs AWS al inicio y al cierre.
-- [ ] Exportar en 1080p como `DFSha_FaseII_Video_Grupo.mp4` y subirlo al enlace de entrega.
+Cada integrante explica su integración y revisión registrada en Git. Los tres deben defender cualquier componente.
+El enlace del video final debe quedar accesible al profesor. Un guion o una captura de un archivo JSON no reemplazan
+la demostración distribuida y la explicación de las garantías.

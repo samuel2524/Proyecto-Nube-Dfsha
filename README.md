@@ -10,15 +10,14 @@ Proyecto universitario de sistema de archivos distribuido, opción cliente/servi
 - [`COMMITS_EQUIPO.md`](COMMITS_EQUIPO.md): integración de los módulos y revisiones por integrante.
 
 La arquitectura tiene dos coordinadores equivalentes, tres miembros etcd/Raft y cuatro nodos de datos.
-Las correcciones se probaron en Docker local; el despliegue y las evidencias finales deben repetirse en AWS Academy.
-No se presenta la ejecución local como una validación de AWS.
+El repositorio contiene el cliente, control, datos, contratos y configuración. Además de pruebas locales,
+incluye registros y capturas aportados de AWS Academy del 6 de noviembre de 2026: regresión de 19 casos,
+caídas de servicios y benchmark completo. No se confunden esas corridas con las pruebas locales previas.
 
 ## Integración del repositorio
 
-Los módulos se incorporan mediante commits separados. Los primeros dos corresponden a cliente/CLI y
-pruebas/documentación; los módulos restantes se integran siguiendo `COMMITS_EQUIPO.md`.
-Un clon intermedio no es todavía la entrega ejecutable completa: comprobar que se hayan integrado control,
-datos, contratos y configuración antes de construir el clúster.
+Los módulos ya se integraron mediante commits separados de los tres participantes. `COMMITS_EQUIPO.md`
+conserva el plan de integración original; para ejecutar la versión actual se utiliza `dfsha/README.md`.
 
 ## Secretos y contribuciones
 

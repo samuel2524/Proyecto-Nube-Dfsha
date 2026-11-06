@@ -1,8 +1,8 @@
 # DFSha — revisión técnica del prototipo grupal
 
-Opción 1: cliente/servidor con comunicación S2S en red privada. **Esta revisión tiene
-validación local; las pruebas/evidencias de AWS deben repetirse antes de la entrega final.**
-Los resultados, Word y PDF anteriores no acreditan automáticamente esta versión.
+Opción 1: cliente/servidor con comunicación S2S en red privada. Se incluyen pruebas locales y registros
+aportados de AWS Academy del 6 de noviembre de 2026: 19 casos de regresión, caídas de servicios
+y benchmark completo. Las evidencias del prototipo previo no se reutilizan como validación de esta versión.
 
 ## Arquitectura y contrato
 
@@ -136,9 +136,10 @@ El script distribuye solo certificados/secretos del rol; no copia la llave SSH a
 En vm4 instalar cliente con `sh scripts/setup_cliente.sh`. La administración de caídas se realiza desde la máquina
 administradora, no entregando su llave privada al cliente.
 
-**Pendiente de ejecutar en AWS:** validación limpia, caídas de VM completa, recuperación y benchmark final. El script
-requiere conectividad SSH directa a las cuatro instancias; para solo bastión público se debe configurar ProxyJump/VPN
-antes de usarlo. La red de servicios debe seguir siendo privada aunque la administración use direcciones públicas.
+**Alcance de la evidencia AWS:** están registrados regresión, benchmark y detención de contenedores de servicios.
+No equivale a la pérdida completa de una VM o de su disco. Siguen pendientes comparar 4/8 MiB y 3/4 nodos,
+instrumentar recursos y ratificar decisiones/entregables finales. El script requiere SSH directo a las cuatro
+instancias; para solo bastión público se debe configurar ProxyJump/VPN. La red de servicios sigue siendo privada.
 
 ## Límites explícitos
 
