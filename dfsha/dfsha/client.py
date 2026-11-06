@@ -140,7 +140,10 @@ class DFS:
                          json={'receipts': list(ack.receipts)})
                 return {'block_id': nb['block_id'], 'fencing': nb['fencing']}
             # la cadena se cortó en el primer nodo que no confirmó: solo ese se excluye
-            excluir.append(next(n.split('@')[0] for n in nb['pipeline'] if n.split('@')[0] not in stored))
+            caido = next((n.split('@')[0] for n in nb['pipeline'] if n.split('@')[0] not in stored), None)
+            if caido is None:               # todos confirmaron y aun así no alcanza W: no hay a quién excluir
+                break
+            excluir.append(caido)
         raise Error(503, 'INSUFFICIENT_REPLICAS', f'el bloque {i} no alcanzó {nb["w"]} réplicas')
 
     def download(self, b, dek):
@@ -195,9 +198,7 @@ class DFS:
         try:
             with open(temp, 'xb') as dst, ThreadPoolExecutor(PARALELO) as pool:
                 for i in range(0, len(f.blocks), PARALELO):
-                    # Refrescar endpoints/capacidades de la misma versión, no abrir la última.
-                    f.refresh()
-                    for data in pool.map(lambda b: self.download(b, f.dek), f.blocks[i:i + PARALELO]):
+                    for data in pool.map(f.bajar, range(i, min(i + PARALELO, len(f.blocks)))):
                         dst.write(data)
                         count += len(data)
                         h.update(data)
@@ -232,7 +233,7 @@ class File:
         if self.fd:
             threading.Thread(target=self._renovar, daemon=True).start()
 
-    def _renovar(self):                     # el lock dura 30 s; se renueva cada 10 s
+    def _renovar(self):                     # la sesión dura 60 s; se renueva cada 10 s
         while not self._stop.wait(10):
             try:
                 self.dfs.req('POST', f'/v1/files/{self.fd}/keepalive')
@@ -258,9 +259,17 @@ class File:
         if i >= len(self.blocks):
             return b''
         if i not in self.cache:
-            self.refresh()
-            self.cache[i] = self.dfs.download(self.blocks[i], self.dek)
+            self.cache[i] = self.bajar(i)
         return self.cache[i]
+
+    def bajar(self, i):
+        """Descarga el bloque i de la versión abierta. El índice (manifiesto) solo se vuelve a pedir si la
+        descarga falla, por permisos vencidos o réplicas movidas, y se reintenta una vez."""
+        try:
+            return self.dfs.download(self.blocks[i], self.dek)
+        except Error:
+            self.refresh()                  # misma versión: nuevos permisos y ubicaciones
+            return self.dfs.download(self.blocks[i], self.dek)
 
     def read(self, offset, n):
         if offset < 0 or n < 0:

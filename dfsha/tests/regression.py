@@ -111,6 +111,16 @@ class Regression(unittest.TestCase):
         self.dfs.mv(self.file, self.file + '-renamed')
         self.expect(404, self.dfs.stat, self.file)
 
+    def test_cli_failed_write_releases_session(self):
+        from dfsha import cli
+        self.seed()
+        holder = self.opened_file(mode='rw')
+        holder.write(0, b'H')                       # toma el lock del bloque 0
+        cli.guardar({'cwd': '/', 'token': self.dfs.token})
+        self.assertEqual(cli.main(['write', self.file, '0', 'X']), 1)   # 423: el bloque está tomado
+        holder.close()
+        self.dfs.rm(self.file)                      # sin abort, la sesión fallida seguiría viva y rm daría 423
+
     def test_append_and_truncate_are_exclusive(self):
         self.seed(b'a')
         writer = self.opened_file(mode='a')

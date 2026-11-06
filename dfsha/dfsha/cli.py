@@ -102,19 +102,25 @@ def main(argv=None):
                 f.close()
         elif c in ('write', 'append'):
             f = dfs.open(ruta(args.path), 'a' if c == 'append' else 'rw', create=True)
-            f.write(0 if c == 'append' else args.offset, args.texto.encode(),
-                    esperar=getattr(args, 'esperar', False))
-            print(f'lock obtenido, fencing {f.fencing}')
-            if getattr(args, 'mantener', 0):
-                print(f'manteniendo el lock {args.mantener} s antes de close...', flush=True)
-                time.sleep(args.mantener)
-            print(f'close: publicada versión {f.close()}')
+            try:
+                f.write(0 if c == 'append' else args.offset, args.texto.encode(),
+                        esperar=getattr(args, 'esperar', False))
+                print(f'lock obtenido, fencing {f.fencing}')
+                if getattr(args, 'mantener', 0):
+                    print(f'manteniendo el lock {args.mantener} s antes de close...', flush=True)
+                    time.sleep(args.mantener)
+                print(f'close: publicada versión {f.close()}')
+            finally:
+                f.abort()                  # si algo falló, libera sesión y locks ya (tras close no hace nada)
         elif c == 'lock':
             f = dfs.open(ruta(args.path), 'rw')
-            print(f'lock concedido, fencing {f.lock(args.desde, args.hasta, args.esperar)}', flush=True)
-            time.sleep(args.segundos)
-            f.close()
-            print('lock liberado')
+            try:
+                print(f'lock concedido, fencing {f.lock(args.desde, args.hasta, args.esperar)}', flush=True)
+                time.sleep(args.segundos)
+                f.close()
+                print('lock liberado')
+            finally:
+                f.abort()
         elif c == 'nodes':
             r = dfs.nodes()
             print(f"atendido por {r['atendido_por']}, monitor líder {r['monitor']}, "
