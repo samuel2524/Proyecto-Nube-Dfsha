@@ -1,0 +1,25 @@
+syntax = "proto3";
+package dfsha;
+service DataNode {
+  rpc WriteBlock(stream WriteChunk) returns (WriteAck);
+  rpc ReadBlock(BlockReq) returns (stream Chunk);
+  rpc ReplicateBlock(ReplicateReq) returns (WriteAck);
+  rpc DeleteBlock(BlockReq) returns (Empty);
+  rpc ListBlocks(ListReq) returns (BlockList);
+}
+message WriteChunk {
+  string block_id = 1;
+  string token = 2;
+  repeated string pipeline = 3;
+  string sha256 = 4;
+  bytes data = 5;
+  uint64 size = 6;
+  string operation_id = 7;
+}
+message WriteAck { repeated string stored = 1; repeated string receipts = 2; }
+message BlockReq { string block_id = 1; string token = 2; }
+message Chunk { bytes data = 1; }
+message ReplicateReq { string block_id = 1; string token = 2; string target = 3; string sha256 = 4; uint64 size = 5; }
+message ListReq { string token = 1; double older_than = 2; }
+message BlockList { repeated string block_ids = 1; }
+message Empty {}
