@@ -96,9 +96,9 @@ La prueba grande transfiere y recupera 129 bloques (1032 MiB con la configuraci�
 Consume varios GiB de disco por la replicación. El orquestador de fallos solo detiene servicios del proyecto Compose
 indicado y los restaura en `finally`; nunca llama a AWS/SSH ni elimina volúmenes.
 
-Para pruebas del contrato del GC con etcd en memoria (sin conexión de red), ejecutar en un contenedor temporal
-con `.env`, certificados de prueba de `meta1`, y `tests/` montados; comando completo en el registro de cambios.
-No hacerlas dentro del catálogo real de AWS.
+`python scripts/record_checks.py` registra las pruebas de contrato del GC con etcd en memoria, estadística,
+aislamiento de paquetes y configuración. Usa un contenedor temporal con identidad de prueba de `meta1` para las
+pruebas aisladas y el clúster local levantado para la comprobación mTLS. No ejecuta las pruebas de memoria contra AWS.
 
 ### Benchmark corregido
 
@@ -109,7 +109,7 @@ docker compose -p dfsha-revision -f docker-compose.local.yml exec -T cliente pyt
 Cada corrida crea `resultados/revision-bench-<UTC>-<id>/` con `samples.csv`, `summary.csv` y `run.json`.
 Guarda cada repetición y el hash del código. Cinco muestras hacen que p95 por rango más cercano sea el máximo;
 para caracterizar colas conviene aumentar las repeticiones. E2 compara R=2 y R=3 con W=2.
-No se altera el `bench.csv` histórico incompatible ni se reutiliza como resultado nuevo.
+Cada ejecución se conserva por separado; el índice de resultados distingue la corrida AWS fallida de la completa.
 
 La comparación 4/8 MiB exige clústeres separados y vacíos con la misma carga; cambiar `BLOCK_SIZE` sobre datos
 existentes no es compatible. La comparación por número de nodos y las métricas de CPU/disco/NIC quedan explícitas
@@ -152,4 +152,5 @@ instancias; para solo bastión público se debe configurar ProxyJump/VPN. La red
 - La réplica S2S de esta revisión es secuencial desde un bloque validado, no un pipeline solapado. Medir el costo real.
 - El acuerdo del equipo, aprobaciones, aportes reales, repositorio y video los debe completar el equipo.
 
-Ver `../CAMBIOS_CORRECCIONES_DFSHA.md`, `../informe/COMPARACION_PROPUESTAS.md` y `resultados/LEER_ANTES_DE_USAR.md`.
+Ver [evidencias de ejecución](resultados/README.md), [comparación de propuestas](../informe/COMPARACION_PROPUESTAS.md)
+y [decisiones arquitectónicas](../informe/ADR_REVISION.md).

@@ -11,6 +11,8 @@
 **/resultados/**/*.bin
 ~$*
 *.zip
+# Documento intermedio: la entrega y el repositorio contienen solo el PDF.
+DFSha_FaseII_Informe_Grupal.docx
 # Material previo conservado localmente; no pertenece a la entrega corregida.
 informe/historico/
 informe/estilo.py

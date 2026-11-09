@@ -1,28 +1,63 @@
-# Proyecto Nube — DFSha
+# DFSha: sistema de archivos distribuido
 
-Proyecto universitario de sistema de archivos distribuido, opción cliente/servidor S2S.
+Proyecto 1, Fase II de Arquitecturas de Nube y Sistemas Distribuidos, Universidad Pontificia Bolivariana.
 
-## Carpetas
+**Integrantes:** Andrés Felipe Martínez Velasquez, Juan José García Duque y Samuel Parra Cadavid.
 
-- [`dfsha/`](dfsha/README.md): aplicación, contratos, configuración, pruebas e instrucciones de ejecución.
-- `informe/`: comparación de propuestas, decisiones y generador del informe grupal.
-- `CAMBIOS_CORRECCIONES_DFSHA.md`: correcciones técnicas y límites de la validación realizada.
-- [`COMMITS_EQUIPO.md`](COMMITS_EQUIPO.md): integración de los módulos y revisiones por integrante.
+## Arquitectura
 
-La arquitectura tiene dos coordinadores equivalentes, tres miembros etcd/Raft y cuatro nodos de datos.
-El repositorio contiene el cliente, control, datos, contratos y configuración. Además de pruebas locales,
-incluye registros y capturas aportados de AWS Academy del 6 de noviembre de 2026: regresión de 19 casos,
-caídas de servicios y benchmark completo. No se confunden esas corridas con las pruebas locales previas.
+Cliente/servidor con comunicación S2S sobre una red privada:
 
-## Integración del repositorio
+- Dos coordinadores equivalentes y tres miembros etcd/Raft para metadatos, sesiones y publicación de versiones.
+- Cuatro nodos de datos; el cliente transfiere bloques directamente a los nodos, que replican entre servidores.
+- Bloques de hasta 8 MiB, tres réplicas objetivo y dos confirmaciones persistentes distintas por bloque antes de publicar.
+- REST/HTTPS para control y gRPC/mTLS para datos; cifrado AES-GCM y recibos firmados por nodo.
 
-Los módulos ya se integraron mediante commits separados de los tres participantes. `COMMITS_EQUIPO.md`
-conserva el plan de integración original; para ejecutar la versión actual se utiliza `dfsha/README.md`.
+## Instalación, ejecución y pruebas
 
-## Secretos y contribuciones
+Las instrucciones completas de dependencias, Docker, CLI, despliegue en AWS Academy y pruebas están en
+[`dfsha/README.md`](dfsha/README.md). Los comandos de aplicación se ejecutan desde la subcarpeta `dfsha/`.
 
-Nunca subir `.env`, `meta.env`, `certs/`, llaves SSH, certificados privados o archivos binarios de prueba.
-Las instrucciones generan credenciales de laboratorio localmente. El ZIP de intercambio tampoco los incluye.
+```text
+DFSha_FaseII/
+├── README.md
+├── DFSha_FaseII_Informe_Grupal.pdf
+├── dfsha/       # Código, contratos, dependencias, despliegue, pruebas y resultados
+└── informe/     # Comparación, decisiones, figuras y fuentes del informe
+```
 
-Cada integrante debe revisar, probar y describir sus aportes reales al integrar el prototipo asistido.
-La fecha/autor de un commit de integración no se presenta como prueba de una autoría previa que no se verificó.
+## Informe y decisiones
+
+- [Informe técnico final en PDF](DFSha_FaseII_Informe_Grupal.pdf).
+- [Comparación de las tres propuestas individuales](informe/COMPARACION_PROPUESTAS.md).
+- [Registro de decisiones arquitectónicas](informe/ADR_REVISION.md).
+
+El PDF contiene la explicación del servicio, arquitectura, APIs, ejemplos, garantías, pruebas, resultados y referencias.
+
+## Evidencias
+
+[El índice de resultados](dfsha/resultados/README.md) identifica las ejecuciones que respaldan la entrega.
+Se conservan la regresión AWS de 19 casos, las 80 muestras del benchmark completo, el registro de caídas
+y la corrida fallida que documenta la corrección de reintentos. Las comprobaciones locales se distinguen de AWS.
+
+Las pruebas remotas detienen contenedores de servicios en cuatro VMs EC2; no equivalen a apagar una VM completa.
+
+## Fuentes y comprobación del informe
+
+La entrega incluye únicamente el PDF. El generador y sus pruebas se conservan para reproducir el contenido:
+
+```bash
+python -m pip install -r informe/requirements.txt
+python informe/construir_informe.py
+python -m unittest discover -s informe -p "test_documento_academico.py" -v
+```
+
+Estos comandos son opcionales para la documentación, no para arrancar DFSha. El generador produce un DOCX
+intermedio que las pruebas de formato necesitan y que Git ignora; no forma parte de la entrega.
+No reemplaza el PDF automáticamente ni reproduce necesariamente los ajustes manuales de la versión final.
+
+## Configuración local
+
+`.env`, `meta.env`, certificados, CA y llaves SSH se generan o configuran localmente. Están excluidos de Git
+y deben quedar fuera del ZIP de entrega. Se mantienen los generadores de identidades y la configuración fuente
+necesarios para preparar una instalación nueva.
